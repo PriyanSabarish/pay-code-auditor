@@ -1,0 +1,1 @@
+export default { content: ['./index.html', './src/**/*.{ts,tsx}'], corePlugins: { preflight: false }, theme: { extend: { colors: { ink: '#263b36', paper: '#f5f1e8', rust: '#b3472d' } } }, plugins: [] };
