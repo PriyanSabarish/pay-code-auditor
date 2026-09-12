@@ -1,9 +1,9 @@
-"""ISOLATED UI PREVIEW ONLY. Not Priyan's production API or payroll logic.
+"""ISOLATED UI PREVIEW ONLY. This is not a production API or payroll engine.
 
 Run from repository root: python -m uvicorn web.preview_api:app --port 8000
 All verdicts/figures are synthetic. No uploads are saved or sent to a model.
 The document specifies routes but not exact models. These provisional models
-exist to generate frontend types and must be replaced with Priyan's OpenAPI.
+exist to generate frontend types and must be replaced with the application contract.
 """
 import asyncio
 import csv
@@ -111,12 +111,14 @@ jobs: dict[str, AuditJob] = {}
 
 
 def get_job(audit_id: str) -> AuditJob:
+    """Return a stored preview job or a readable not-found response."""
     if audit_id not in jobs:
         raise HTTPException(404, "This audit is unavailable. The preview server may have restarted. Start a new review.")
     return jobs[audit_id]
 
 
 def sample_result() -> AuditResult:
+    """Build the fictional findings used to demonstrate the interface."""
     examples = [("ORD_HRS", "Ordinary hours", "correct", "yes", 0), ("BASE_PAY", "Base pay", "correct", "yes", 0), ("SHIFT_X", "Shift payment X", "under", "yes", 720), ("PAYMENT_Y", "Payment Y", "over", "no", 240), ("SITE_ALLOW", "Site allowance", "review", "unclear", 0), ("OTHER_01", "Other payment", "review", "unclear", 0), ("STANDARD", "Standard earnings", "correct", "yes", 0), ("REGULAR", "Regular earnings", "correct", "yes", 0)]
     trail = [Step(tool="get_payment_history", summary="Loaded fictional payment history for this example."), Step(tool="search_ato_guidance", summary="Preview placeholder: real source retrieval belongs to the connected backend."), Step(tool="search_award", summary="Preview placeholder: the production award and clause are not selected."), Step(tool="calculate_impact", summary="Displayed an illustrative amount; no payroll calculation was performed."), Step(tool="verifier", summary="Preview placeholder: no model verification was performed.")]
     verdicts = [Verdict(code=c, name=n, status=s, counts_towards_super=t, confidence="low" if s == "review" else "medium", annual_impact=a, reasoning="This fictional case demonstrates the review interface. It does not establish the treatment of any real payment.", citations=[Citation(clause="Illustrative evidence placeholder", text="The connected audit will return an actual source passage and its clause identifier here. This is not an ATO quotation.")], steps=trail, verifier="Not verified — interface sample") for c,n,s,t,a in examples]
@@ -125,10 +127,12 @@ def sample_result() -> AuditResult:
 
 @app.get("/api/awards", response_model=list[Award])
 def awards():
+    """List award contexts available to the local preview."""
     return [Award(id="demo-award", name="Sample award context · preview only")]
 
 
 async def advance(audit_id: str):
+    """Populate a preview job gradually, then pause it for reviewer input."""
     job = jobs[audit_id]
     fixture = sample_result()
     job.status = "running"
@@ -147,6 +151,7 @@ async def advance(audit_id: str):
 
 @app.post("/api/audits", status_code=202, response_model=AuditCreated)
 async def create_audit(paycodes: UploadFile = File(...), payruns: UploadFile = File(...), award_id: str = Form(...), mode: Literal["keyword", "no_rag", "classifier", "agent", "full"] = Form("full")):
+    """Validate uploaded CSV files and start a bounded synthetic audit job."""
     errors = []
     if award_id != "demo-award":
         errors.append({"loc":["body","award_id"],"msg":"Select the sample award context."})
@@ -170,7 +175,7 @@ async def create_audit(paycodes: UploadFile = File(...), payruns: UploadFile = F
             errors.append({"loc":["body",field],"msg":str(exc) if not isinstance(exc, UnicodeDecodeError) else "Export this file as CSV UTF-8."})
     if errors:
         raise HTTPException(422, errors)
-    # Bounded demo store; production lifecycle belongs to Priyan.
+    # Keep the in-memory preview store bounded.
     if len(jobs) >= 100:
         terminal = next((key for key,value in jobs.items() if value.status in ("complete","failed")), None)
         if terminal:
@@ -185,11 +190,13 @@ async def create_audit(paycodes: UploadFile = File(...), payruns: UploadFile = F
 
 @app.get("/api/audits/{audit_id}", response_model=AuditJob)
 def poll(audit_id: str):
+    """Return the latest state of a preview audit."""
     return get_job(audit_id)
 
 
 @app.post("/api/audits/{audit_id}/answer", response_model=AuditJob)
 def answer(audit_id: str, body: Answer):
+    """Record reviewer context and complete the paused preview audit."""
     job = get_job(audit_id)
     if job.status != "awaiting_input" or not job.pending_question or body.question_id != job.pending_question.id:
         raise HTTPException(409, "That question is no longer pending. Refresh the audit.")
@@ -206,6 +213,7 @@ def answer(audit_id: str, body: Answer):
 
 @app.post("/api/audits/{audit_id}/verdicts/{code}", response_model=Verdict)
 def decide(audit_id: str, code: str, body: Decision):
+    """Save a reviewer approval or documented override for one finding."""
     job = get_job(audit_id)
     if job.status != "complete":
         raise HTTPException(409, "Complete the investigation before recording decisions.")
@@ -221,12 +229,14 @@ def decide(audit_id: str, code: str, body: Decision):
 
 
 def csv_safe(value):
+    """Prevent spreadsheet software from interpreting exported values as formulas."""
     text = str(value)
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
 @app.get("/api/audits/{audit_id}/report.csv")
 def report(audit_id: str):
+    """Export completed preview findings as a CSV attachment."""
     job = get_job(audit_id)
     if job.status != "complete":
         raise HTTPException(409, "The audit is not complete.")
@@ -240,6 +250,7 @@ def report(audit_id: str):
 
 @app.get("/api/audits/{audit_id}/letter/{code}", response_model=Letter)
 def letter(audit_id: str, code: str, download: bool = False):
+    """Create a review-ready draft letter for a decided finding."""
     job = get_job(audit_id)
     verdict = next((v for v in (job.result.verdicts if job.result else []) if v.code == code), None)
     if not verdict or not verdict.decision:
@@ -257,6 +268,7 @@ if DIST.exists():
 
 @app.get("/{path:path}", include_in_schema=False)
 def spa(path: str):
+    """Serve compiled frontend files while preserving API 404 responses."""
     if path == "api" or path.startswith("api/") or path.startswith("assets/"):
         raise HTTPException(404, "Not found")
     candidate = (DIST / path).resolve()

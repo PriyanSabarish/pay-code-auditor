@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Question } from '../api/client';
 
+/** Collects reviewer context and resumes an audit that is awaiting input. */
 export default function QuestionCard({question,auditId}:{question:Question;auditId:string}) {
   const [answer,setAnswer] = useState('');
   const queryClient = useQueryClient();

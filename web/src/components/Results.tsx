@@ -6,6 +6,7 @@ import { api, money, safeSource, statusLabels } from '../api/client';
 import type { AuditJob, Decision, Verdict } from '../api/client';
 import QuestionCard from './QuestionCard';
 
+/** Presents audit progress, findings, evidence, and reviewer decisions. */
 export default function Results({job}:{job:AuditJob}) {
   const queryClient = useQueryClient();
   const [filter,setFilter] = useState('all');

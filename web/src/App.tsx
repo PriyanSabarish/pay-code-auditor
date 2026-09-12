@@ -14,6 +14,7 @@ class ErrorBoundary extends Component<{children:ReactNode},{failed:boolean}> {
   render(){return this.state.failed?<main className="page-shell"><h1>We couldn't display this review.</h1><p>The API response may not match the frontend contract. Reload to start again.</p><Button onClick={()=>location.reload()}>Reload workspace</Button></main>:this.props.children;}
 }
 
+/** Coordinates uploads, audit polling, sample data, and workspace state. */
 function Workspace() {
   const [paycodes,setPaycodes]=useState<File|null>(null);
   const [payruns,setPayruns]=useState<File|null>(null);
@@ -77,5 +78,7 @@ function Workspace() {
     <Modal opened={resetOpen} onClose={()=>setResetOpen(false)} title="Start a new review?" centered><p>This clears the current files and results from this screen. Any existing job stays on the server until it expires or the server restarts.</p><div className="flex gap-3 mt-5"><Button variant="outline" onClick={()=>setResetOpen(false)}>Keep this review</Button><Button onClick={reset}>Start new review</Button></div></Modal>
   </div>;
 }
+/** Draws the award selector's decorative dropdown indicator. */
 function ChevronIcon(){return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.5"/></svg>;}
+/** Mounts the workspace inside its application-level error boundary. */
 export default function App(){return <ErrorBoundary><Workspace/></ErrorBoundary>;}

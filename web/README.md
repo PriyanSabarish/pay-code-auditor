@@ -1,4 +1,4 @@
-# React frontend — Varun's lane
+# React frontend
 
 ## Implemented
 
@@ -40,11 +40,11 @@ cd ..
 
 Restart the server after the first build so it mounts the assets. Open http://127.0.0.1:8000. Both API and compiled React run on this origin. Refresh `/workspace/review` to test the SPA fallback. Missing API and asset paths return 404. This remains a sample-only service.
 
-## Priyan handoff
+## API integration
 
-The revision specifies routes but not exact models. Remote main still had only `.gitignore` and `.env.example` at implementation time. `web/preview_api.py` provides an isolated provisional Pydantic contract outside Priyan's directories. No production `api/` or `auditor/` files were created or modified.
+`web/preview_api.py` provides a provisional Pydantic contract for local interface development.
 
-When Priyan's server is running on port 8000:
+When the application API is running on port 8000:
 
 ```powershell
 cd web
@@ -65,21 +65,7 @@ Confirm these assumptions:
 - Letter: JSON `{code,text,draft}`; optional `?download=true` returns an attachment. Confirm this download option.
 - Money: currently JSON numbers; adapt if production Decimal fields serialize as strings.
 
-The preview contains all seven routes, synthetic transitions, server-generated reports, and the static fallback. It is not the AI lane implementation. The data teammate implements real export in `auditor/report.py`; React only links to the endpoint.
-
-The previous agent-created Streamlit source was removed after the user changed plans. The existing virtual environment may retain Streamlit, but this frontend does not depend on it.
-
-## Hosting after your manual commit and push
-
-Render or Railway, one service. Once Priyan supplies production API and root requirements:
-
-Build: `cd web && npm ci && npm run build && cd .. && pip install -r requirements.txt`
-
-Start: `uvicorn api.main:app --host 0.0.0.0 --port $PORT --workers 1`
-
-Register `/api` first, mount `web/dist/assets` at `/assets`, serve public files from `web/dist`, and use `index.html` fallback for frontend paths only. The preview demonstrates this. Use one worker while jobs live in memory. Store model keys in backend platform secrets, never `VITE_` variables.
-
-No public URL, commit, push, branch merge or hosting account change has been made. Publication awaits your manual commit/push and the backend handoff.
+The preview contains all seven routes, synthetic transitions, server-generated reports, and the static fallback. React links to the report endpoint and does not calculate payroll findings in the browser.
 
 ## Checks
 

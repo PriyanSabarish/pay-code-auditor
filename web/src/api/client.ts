@@ -12,6 +12,7 @@ export class ApiError extends Error {
   constructor(message: string, public status: number, public fields: Record<string,string> = {}) { super(message); }
 }
 
+/** Converts an unsuccessful API payload into a consistent, readable error. */
 export function parseError(payload: unknown, status: number): ApiError {
   const detail = payload && typeof payload === 'object' && 'detail' in payload ? payload.detail : null;
   if (typeof detail === 'string') return new ApiError(detail, status);
@@ -26,6 +27,7 @@ export function parseError(payload: unknown, status: number): ApiError {
   return new ApiError(Object.values(fields).join(' ') || `The request could not be completed (${status}). Please try again.`,status,fields);
 }
 
+/** Sends an API request and validates that it returns successful JSON. */
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try { response = await fetch(path, { ...init, signal: init.signal ?? AbortSignal.timeout(30_000) }); }
@@ -57,6 +59,7 @@ export const api = {
   letterUrl: (id:string,code:string) => `${auditPath(id)}/letter/${encodeURIComponent(code)}?download=true`,
 };
 
+/** Validates a selected payroll file before it is uploaded. */
 export function fileError(file:File | null): string | undefined {
   if (!file) return undefined;
   if (!file.name.toLowerCase().endsWith('.csv')) return 'Choose a .csv file.';
@@ -65,10 +68,12 @@ export function fileError(file:File | null): string | undefined {
   return undefined;
 }
 
+/** Returns the polling delay for active jobs and stops polling terminal jobs. */
 export function pollInterval(status: AuditJob['status'] | undefined): number | false {
   return status === 'queued' || status === 'running' ? 1000 : false;
 }
 
+/** Allows only HTTP and HTTPS links returned as supporting sources. */
 export function safeSource(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
   try { const value = new URL(url); return ['https:','http:'].includes(value.protocol) ? value.href : undefined; } catch { return undefined; }

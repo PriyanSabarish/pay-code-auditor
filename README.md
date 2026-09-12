@@ -1,11 +1,7 @@
 # Pay Code Auditor
 
-The frontend follows revision 2 of the team plan: React, TypeScript, Vite, Tailwind, Mantine, and TanStack Query. The retro visual identity is retained.
+Pay Code Auditor provides a responsive React workspace for reviewing payroll codes, following supporting evidence, recording decisions, and exporting findings. It uses React, TypeScript, Vite, Tailwind, Mantine, and TanStack Query with a retro-inspired visual identity.
 
-Frontend setup, handoff notes and deployment instructions: [web/README.md](web/README.md).
+Frontend setup and local development instructions are available in [web/README.md](web/README.md).
 
-Priyan owns production `api/` and the AI `auditor/` package. The data teammate owns ingest, calculations and reports. Varun owns `web/`.
-
-The production API was not yet available in this checkout. `web/preview_api.py` is an isolated synthetic HTTP service for frontend development. Its exact models are provisional and generated to TypeScript through OpenAPI. It does not classify real pay codes, retrieve legal guidance or calculate actual financial impact. Replace its contract with Priyan's OpenAPI before claiming integration.
-
-All changes are left uncommitted for manual review and commit in VS Code.
+`web/preview_api.py` is a synthetic local service for interface development. It does not classify real pay codes, retrieve legal guidance, or calculate financial impact. Use fictional data while running the preview.

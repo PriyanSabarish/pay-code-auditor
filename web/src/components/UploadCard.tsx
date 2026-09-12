@@ -2,6 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { FileCheck2, Upload, X } from 'lucide-react';
 
 type Props = {label:string;description:string;file:File|null;onChange:(file:File|null)=>void;error?:string;disabled:boolean};
+/** Renders an accessible CSV picker with drag-and-drop support. */
 export default function UploadCard({label,description,file,onChange,error,disabled}:Props) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
