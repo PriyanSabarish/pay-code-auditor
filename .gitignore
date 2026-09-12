@@ -1,0 +1,6 @@
+﻿.env
+.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+data/samples/*_answer_key.csv
