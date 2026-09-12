@@ -1,0 +1,349 @@
+[
+  {
+    "code": "ORD HRS",
+    "name": "Ordinary Hours",
+    "status": "correct",
+    "classification": {
+      "code": "ORD HRS",
+      "normalised_name": "Ordinary hours wages",
+      "ato_category": "ordinary_hours_wages",
+      "counts_towards_super": "yes",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "Counts towards super table",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "Ordinary hours wages and salary, including daily rates and flexi-time."
+        }
+      ],
+      "reasoning": "Ordinary hours wages; correctly set to count towards super.",
+      "question_for_reviewer": null
+    },
+    "investigation": [],
+    "verifier_agreed": true,
+    "impact": null,
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "SITE ALLOW",
+    "name": "Site Allowance",
+    "status": "should_count",
+    "classification": {
+      "code": "SITE ALLOW",
+      "normalised_name": "Site allowance",
+      "ato_category": "allowance_working_conditions",
+      "counts_towards_super": "yes",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "General Retail Industry Award 2020",
+          "reference": "cl. 19.4",
+          "url": "https://www.fwc.gov.au/documents/awards/modern-awards-list.htm",
+          "retrieved_date": "2026-09-01",
+          "text": "Site allowance is paid as compensation for working in adverse site conditions."
+        },
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "Allowances for adverse working conditions",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "Allowances for adverse working conditions (heat, heights, confined spaces) count towards super."
+        }
+      ],
+      "reasoning": "Paid to compensate for site conditions, not an expense reimbursement, so it counts towards super. Currently excluded in the payroll setup — this is a setup error.",
+      "question_for_reviewer": null
+    },
+    "investigation": [
+      {
+        "step_number": 1,
+        "tool": "get_payment_history",
+        "input": {"code": "SITE ALLOW"},
+        "output": "The same $45 paid to 25 workers every fortnight.",
+        "citation": null
+      },
+      {
+        "step_number": 2,
+        "tool": "search_award",
+        "input": {"query": "site allowance"},
+        "output": "The award describes the site allowance as compensation for working conditions, not an expense reimbursement.",
+        "citation": {
+          "source": "General Retail Industry Award 2020",
+          "reference": "cl. 19.4",
+          "url": "https://www.fwc.gov.au/documents/awards/modern-awards-list.htm",
+          "retrieved_date": "2026-09-01",
+          "text": "Site allowance is paid as compensation for working in adverse site conditions."
+        }
+      },
+      {
+        "step_number": 3,
+        "tool": "search_ato_guidance",
+        "input": {"query": "allowances for working conditions"},
+        "output": "Allowances for working conditions count towards super.",
+        "citation": {
+          "source": "ATO qualifying earnings page",
+          "reference": "Allowances for adverse working conditions",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "Allowances for adverse working conditions (heat, heights, confined spaces) count towards super."
+        }
+      },
+      {
+        "step_number": 4,
+        "tool": "search_award",
+        "input": {"query": "expense allowance reimbursement"},
+        "output": "Award clause 19.2 defines expense-related allowances separately; the site allowance is not listed there, ruling out expense reimbursement.",
+        "citation": {
+          "source": "General Retail Industry Award 2020",
+          "reference": "cl. 19.2",
+          "url": "https://www.fwc.gov.au/documents/awards/modern-awards-list.htm",
+          "retrieved_date": "2026-09-01",
+          "text": "Expense-related allowances reimburse a specific outlay incurred by the employee."
+        }
+      },
+      {
+        "step_number": 5,
+        "tool": "calculate_impact",
+        "input": {"code": "SITE ALLOW", "direction": "should_count_not_counted"},
+        "output": "Annual amount $29,250.00; super shortfall $3,510.00; administrative uplift exposure up to $2,106.00, plus interest.",
+        "citation": null
+      }
+    ],
+    "verifier_agreed": true,
+    "impact": {
+      "code": "SITE ALLOW",
+      "direction": "should_count_not_counted",
+      "annual_amount": 29250.0,
+      "super_amount": 3510.0,
+      "max_penalty_uplift": 2106.0,
+      "note": "Super shortfall of $3,510.00 per year on this code, plus an administrative uplift of up to $2,106.00, plus interest."
+    },
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "OT 1.5",
+    "name": "Overtime 1.5x",
+    "status": "correct",
+    "classification": {
+      "code": "OT 1.5",
+      "normalised_name": "Overtime at 1.5x",
+      "ato_category": "overtime",
+      "counts_towards_super": "no",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "Overtime",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "Overtime does not count where ordinary hours are clearly set by an award or agreement."
+        }
+      ],
+      "reasoning": "Overtime paid above the award's clearly set ordinary hours; correctly excluded.",
+      "question_for_reviewer": null
+    },
+    "investigation": [],
+    "verifier_agreed": true,
+    "impact": null,
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "XMAS BONUS",
+    "name": "Christmas Bonus",
+    "status": "correct",
+    "classification": {
+      "code": "XMAS BONUS",
+      "normalised_name": "Christmas bonus",
+      "ato_category": "bonus_ordinary_hours",
+      "counts_towards_super": "yes",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "Bonuses for ordinary hours work",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "Performance, Christmas, sign-on and referral bonuses count towards super."
+        }
+      ],
+      "reasoning": "Christmas bonus for ordinary hours work; correctly counted.",
+      "question_for_reviewer": null
+    },
+    "investigation": [],
+    "verifier_agreed": true,
+    "impact": null,
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "TOOL ALLOW (expended)",
+    "name": "Tool Allowance (fully expended)",
+    "status": "correct",
+    "classification": {
+      "code": "TOOL ALLOW (expended)",
+      "normalised_name": "Tool allowance, fully expended",
+      "ato_category": "expense_allowance_fully_expended",
+      "counts_towards_super": "no",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "Expense allowances expected to be fully spent",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "For example, a tool allowance fully used for tools does not count towards super."
+        }
+      ],
+      "reasoning": "Tool allowance expected to be fully spent on tools; correctly excluded.",
+      "question_for_reviewer": null
+    },
+    "investigation": [],
+    "verifier_agreed": true,
+    "impact": null,
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "ON CALL (after hrs)",
+    "name": "On-Call Allowance (after hours)",
+    "status": "counts_but_shouldnt",
+    "classification": {
+      "code": "ON CALL (after hrs)",
+      "normalised_name": "On-call allowance, after hours",
+      "ato_category": "on_call_after_hours",
+      "counts_towards_super": "no",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "On-call allowances outside ordinary hours; call-back allowances",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "On-call allowances outside ordinary hours, and call-back allowances, do not count towards super."
+        }
+      ],
+      "reasoning": "Paid for on-call availability outside ordinary hours; does not count towards super. Currently included in the super calculation — this is a setup error causing overpayment.",
+      "question_for_reviewer": null
+    },
+    "investigation": [
+      {
+        "step_number": 1,
+        "tool": "get_payment_history",
+        "input": {"code": "ON CALL (after hrs)"},
+        "output": "A flat $60 paid to 8 employees each fortnight, unrelated to hours worked.",
+        "citation": null
+      },
+      {
+        "step_number": 2,
+        "tool": "search_ato_guidance",
+        "input": {"query": "on-call allowance after hours"},
+        "output": "On-call allowances outside ordinary hours do not count towards super.",
+        "citation": {
+          "source": "ATO qualifying earnings page",
+          "reference": "On-call allowances outside ordinary hours; call-back allowances",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "On-call allowances outside ordinary hours, and call-back allowances, do not count towards super."
+        }
+      },
+      {
+        "step_number": 3,
+        "tool": "calculate_impact",
+        "input": {"code": "ON CALL (after hrs)", "direction": "counts_should_not"},
+        "output": "Annual amount $12,480.00; super overpaid by approximately $1,497.60 per year.",
+        "citation": null
+      }
+    ],
+    "verifier_agreed": true,
+    "impact": {
+      "code": "ON CALL (after hrs)",
+      "direction": "counts_should_not",
+      "annual_amount": 12480.0,
+      "super_amount": 1497.6,
+      "max_penalty_uplift": null,
+      "note": "Super overpaid by approximately $1,497.60 per year on this code."
+    },
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "RDO PAYOUT",
+    "name": "RDO Payout",
+    "status": "needs_review",
+    "classification": {
+      "code": "RDO PAYOUT",
+      "normalised_name": "RDO payout",
+      "ato_category": "rdo_payout",
+      "counts_towards_super": "unclear",
+      "confidence": "low",
+      "citations": [],
+      "reasoning": "Depends on whether the accrued hours were ordinary time or generated in lieu of overtime; the ATO guidance treats these differently and the payroll export does not say which.",
+      "question_for_reviewer": "Is this RDO payout for hours accrued as ordinary time?"
+    },
+    "investigation": [
+      {
+        "step_number": 1,
+        "tool": "get_payment_history",
+        "input": {"code": "RDO PAYOUT"},
+        "output": "Irregular payments to 4 employees; amounts vary with rostered days off taken.",
+        "citation": null
+      },
+      {
+        "step_number": 2,
+        "tool": "search_ato_guidance",
+        "input": {"query": "RDO payout qualifying earnings"},
+        "output": "Guidance does not directly address RDO cash-outs; treatment depends on how the entitlement accrued.",
+        "citation": null
+      }
+    ],
+    "verifier_agreed": null,
+    "impact": null,
+    "pending_question": {
+      "id": "q-rdo-payout-1",
+      "code": "RDO PAYOUT",
+      "question": "Is this RDO payout for hours accrued as ordinary time?",
+      "context": "RDOs accrued from ordinary hours worked count towards super when paid out; RDOs generated in lieu of overtime do not."
+    },
+    "reviewer_decision": null,
+    "override_note": null
+  },
+  {
+    "code": "COMM Q3",
+    "name": "Commission Q3",
+    "status": "correct",
+    "classification": {
+      "code": "COMM Q3",
+      "normalised_name": "Commission, Q3",
+      "ato_category": "commission",
+      "counts_towards_super": "yes",
+      "confidence": "high",
+      "citations": [
+        {
+          "source": "ATO qualifying earnings page",
+          "reference": "All commissions",
+          "url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+          "retrieved_date": "2026-09-01",
+          "text": "All commissions now count towards super, including commissions paid solely for work done entirely outside ordinary hours."
+        }
+      ],
+      "reasoning": "Commission payment; all commissions now count towards super under the new rules.",
+      "question_for_reviewer": null
+    },
+    "investigation": [],
+    "verifier_agreed": true,
+    "impact": null,
+    "pending_question": null,
+    "reviewer_decision": null,
+    "override_note": null
+  }
+]

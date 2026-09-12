@@ -1,6 +1,9 @@
-﻿.env
+.env
 .venv/
 __pycache__/
 *.pyc
-.streamlit/secrets.toml
+web/node_modules/
+web/dist/
 data/samples/*_answer_key.csv
+.pytest_cache/
+.claude/
