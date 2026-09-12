@@ -2,7 +2,7 @@ import { Component, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Alert, Button, Modal, Select } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowRight, BookOpen, Check, CircleHelp, RotateCcw } from 'lucide-react';
+import { ArrowRight, CircleHelp, RotateCcw } from 'lucide-react';
 import { api, ApiError, fileError, pollInterval } from './api/client';
 import UploadCard from './components/UploadCard';
 
@@ -45,16 +45,6 @@ function Workspace() {
     create.reset();setUploadVersion(value=>value+1);setResetOpen(false);
   };
 
-  /** Starts the preview using small, fictional CSV files. */
-  const sample=()=>{
-    const award=awards.data?.find(item=>item.preview);
-    if(!award)return;
-    const codes=new File(['code,description\nDEMO_01,Fictional code\nDEMO_02,Illustrative code\n'],'sample-paycodes.csv',{type:'text/csv'});
-    const runs=new File(['code,amount\nDEMO_01,100\nDEMO_02,50\n'],'sample-payruns.csv',{type:'text/csv'});
-    setPaycodes(codes);setPayruns(runs);setAwardId(award.id);
-    create.mutate({paycodes:codes,payruns:runs,award_id:award.id});
-  };
-
   return <main className="page-shell minimal-shell">
     <section id="workspace" className="workspace-section" aria-labelledby="workspace-title">
       <div className="section-heading">
@@ -77,14 +67,6 @@ function Workspace() {
           </form>
           {auditId&&<Button variant="subtle" fullWidth mt="xs" leftSection={<RotateCcw size={14}/>} onClick={()=>setResetOpen(true)}>Start a different review</Button>}
         </div>
-        <aside className="notebook">
-          <div className="note-kicker"><BookOpen size={15}/> A NOTE FROM YOUR WORKSPACE</div>
-          <h2>Good records.<br/>Better questions.</h2>
-          <p>A pay code name is only part of the story. A useful review brings the context along with it.</p>
-          <ul><li><span>01</span><div><strong>Pay-code settings</strong><small>Your payment categories and current setup.</small></div></li><li><span>02</span><div><strong>Payment history</strong><small>The amounts and timing behind each code.</small></div></li><li><span>03</span><div><strong>Your professional judgement</strong><small>You review the evidence and make the call.</small></div></li></ul>
-          <div className="sample-start"><Button variant="outline" color="dark" fullWidth onClick={sample} disabled={!preview||busy} loading={create.isPending}>Explore a sample audit</Button><p>{preview?'No files handy? Try the workspace with a fictional cafe. No API key needed.':'Sample mode is available when the preview API is connected.'}</p></div>
-          <div className="note-bottom"><Check size={14}/> THE FINAL SAY IS ALWAYS YOURS.</div>
-        </aside>
       </div>
     </section>
     <Modal opened={resetOpen} onClose={()=>setResetOpen(false)} title="Start a new review?" centered><p>This clears the current files and status from this screen.</p><div className="flex gap-3 mt-5"><Button variant="outline" onClick={()=>setResetOpen(false)}>Keep this review</Button><Button onClick={reset}>Start new review</Button></div></Modal>
