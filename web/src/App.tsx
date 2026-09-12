@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowRight, CircleHelp, RotateCcw } from 'lucide-react';
 import { api, ApiError, fileError, pollInterval } from './api/client';
 import UploadCard from './components/UploadCard';
+import Results from './components/Results';
 
 class ErrorBoundary extends Component<{children:ReactNode},{failed:boolean}> {
   state={failed:false};
@@ -27,17 +28,18 @@ function Workspace() {
     queryFn:({signal})=>api.job(auditId!,signal),
     enabled:!!auditId,
     refetchInterval:query=>pollInterval(query.state.data?.status),
+    refetchIntervalInBackground:true,
     retry:(count,error)=>!(error instanceof ApiError&&error.status===404)&&count<2,
   });
   const create=useMutation({mutationFn:api.create,onSuccess:data=>setAuditId(data.audit_id)});
-  const preview=awards.data?.some(award=>award.preview)??false;
   const busy=create.isPending||!!auditId;
+  const businessLabel=awards.data?.find(award=>award.id===awardId)?.name??'A closer look is underway.';
   const fields=create.error instanceof ApiError?create.error.fields:{};
   const codesError=fileError(paycodes)||fields.paycodes;
   const runsError=fileError(payruns)||fields.payruns;
   const ready=!!paycodes&&!!payruns&&!!awardId&&!codesError&&!runsError&&!busy;
   const activeStep=job.data?.status==='complete'?2:auditId?1:0;
-  const runLabel=job.data?.status==='complete'?'Review ready':job.data?.status==='failed'?'Review interrupted':auditId?'Review in progress':preview?'Run sample audit':'Run audit';
+  const runLabel=job.data?.status==='complete'?'Review ready':job.data?.status==='failed'?'Review interrupted':auditId?'Review in progress':'Run audit';
 
   /** Clears the current files and returns the form to its initial state. */
   const reset=()=>{
@@ -49,7 +51,7 @@ function Workspace() {
     <section id="workspace" className="workspace-section" aria-labelledby="workspace-title">
       <div className="section-heading">
         <div><div className="eyebrow">01 / YOUR WORKSPACE</div><h1 id="workspace-title">Let's look at the details.</h1></div>
-        <div className="connection"><span className={`status-dot ${awards.isSuccess?'done':''}`}/>{awards.isPending?'Connecting to service':awards.error?'Service unavailable':preview?'Sample workspace connected':'Audit service connected'}</div>
+        <div className="connection"><span className={`status-dot ${awards.isSuccess?'done':''}`}/>{awards.isPending?'Connecting to service':awards.error?'Service unavailable':'Audit service connected'}</div>
       </div>
       <div className="workspace-grid">
         <div className="workspace-panel">
@@ -63,12 +65,13 @@ function Workspace() {
             {create.error&&<Alert color="red" mb="md" title="We couldn't start this audit">{create.error.message}</Alert>}
             {job.error&&<Alert color="red" mb="md" title="The review could not be refreshed">{job.error.message}</Alert>}
             <Button fullWidth size="md" type="submit" loading={create.isPending} disabled={!ready} rightSection={<ArrowRight size={16}/>}>{runLabel}</Button>
-            <p className="fine-print"><CircleHelp size={13}/>{preview?'Preview service: files are checked for format, then fictional results are returned. Use sample data only.':'Your files are sent to the connected audit service for review.'}</p>
+            <p className="fine-print"><CircleHelp size={13}/>Your files are sent to the connected audit service for review.</p>
           </form>
           {auditId&&<Button variant="subtle" fullWidth mt="xs" leftSection={<RotateCcw size={14}/>} onClick={()=>setResetOpen(true)}>Start a different review</Button>}
         </div>
       </div>
     </section>
+    {job.data&&<Results job={job.data} businessLabel={businessLabel}/>}
     <Modal opened={resetOpen} onClose={()=>setResetOpen(false)} title="Start a new review?" centered><p>This clears the current files and status from this screen.</p><div className="flex gap-3 mt-5"><Button variant="outline" onClick={()=>setResetOpen(false)}>Keep this review</Button><Button onClick={reset}>Start new review</Button></div></Modal>
   </main>;
 }

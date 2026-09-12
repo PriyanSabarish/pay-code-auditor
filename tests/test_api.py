@@ -67,13 +67,13 @@ def test_create_audit_rejects_bad_paycodes(client):
     resp = _upload(client, paycodes="code,name\nA,B\n")
     assert resp.status_code == 422
     body = resp.json()
-    assert body["errors"][0]["field"] == "paycodes"
+    assert body["detail"][0]["loc"][-1] == "paycodes"
 
 
 def test_create_audit_rejects_unknown_award(client):
     resp = _upload(client, award_id="not_a_real_award")
     assert resp.status_code == 422
-    assert resp.json()["errors"][0]["field"] == "award_id"
+    assert resp.json()["detail"][0]["loc"][-1] == "award_id"
 
 
 def test_full_fake_audit_flow_pauses_and_resumes(client):

@@ -145,6 +145,7 @@ class CodeVerdict(BaseModel):
     pending_question: Optional[ClarifyingQuestion] = None
     reviewer_decision: Optional[ReviewerDecision] = None
     override_note: Optional[str] = None
+    overridden_counts_towards_super: Optional[SuperCountsStatus] = None
 
 
 # The audit job and what the API returns for it
@@ -165,12 +166,13 @@ class AuditResult(BaseModel):
     progress: AuditProgress
     verdicts: list[CodeVerdict] = []
     pending_question: Optional[ClarifyingQuestion] = None
+    error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
 
 class AuditJob(BaseModel):
-    """Internal job-store record (api/jobs.py). Superset of AuditResult with mode/error."""
+    """Internal job-store record (api/jobs.py). Superset of AuditResult with mode."""
 
     audit_id: str
     award_id: str
@@ -191,6 +193,7 @@ class AuditJob(BaseModel):
             progress=self.progress,
             verdicts=self.verdicts,
             pending_question=self.pending_question,
+            error=self.error,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
@@ -216,6 +219,9 @@ class AnswerRequest(BaseModel):
 class VerdictRequest(BaseModel):
     decision: ReviewerDecision
     note: Optional[str] = None
+    # Only meaningful when decision == "overridden": what the reviewer says the correct
+    # treatment actually is.
+    overridden_counts_towards_super: Optional[SuperCountsStatus] = None
 
 
 class LetterResponse(BaseModel):
@@ -223,12 +229,3 @@ class LetterResponse(BaseModel):
     subject: str
     body: str
     draft: bool = True
-
-
-class FieldError(BaseModel):
-    field: str
-    message: str
-
-
-class ValidationErrorResponse(BaseModel):
-    errors: list[FieldError]

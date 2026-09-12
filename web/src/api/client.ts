@@ -1,12 +1,12 @@
 import type { components } from './types';
 
-export type AuditJob = components['schemas']['AuditJob'];
-export type Verdict = components['schemas']['Verdict'];
-export type Decision = components['schemas']['Decision'];
-export type Question = components['schemas']['Question'];
-export type Award = components['schemas']['Award'];
-export type Letter = components['schemas']['Letter'];
-export type Answer = components['schemas']['Answer'];
+export type AuditResult = components['schemas']['AuditResult'];
+export type CodeVerdict = components['schemas']['CodeVerdict'];
+export type VerdictRequest = components['schemas']['VerdictRequest'];
+export type ClarifyingQuestion = components['schemas']['ClarifyingQuestion'];
+export type AwardOption = components['schemas']['AwardOption'];
+export type LetterResponse = components['schemas']['LetterResponse'];
+export type AnswerRequest = components['schemas']['AnswerRequest'];
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public fields: Record<string,string> = {}) { super(message); }
@@ -44,17 +44,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const json = (body: unknown): RequestInit => ({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const auditPath = (id: string) => `/api/audits/${encodeURIComponent(id)}`;
 export const api = {
-  awards: (signal?: AbortSignal) => request<Award[]>('/api/awards',{signal}),
+  awards: (signal?: AbortSignal) => request<AwardOption[]>('/api/awards',{signal}),
   create: (files: {paycodes:File;payruns:File;award_id:string}) => {
     const form = new FormData();
     form.append('paycodes', files.paycodes); form.append('payruns', files.payruns);
     form.append('award_id', files.award_id); form.append('mode','full');
-    return request<components['schemas']['AuditCreated']>('/api/audits',{method:'POST',body:form});
+    return request<components['schemas']['AuditCreateResponse']>('/api/audits',{method:'POST',body:form});
   },
-  job: (id: string, signal?: AbortSignal) => request<AuditJob>(auditPath(id),{signal}),
-  answer: (id: string, body: Answer) => request<AuditJob>(`${auditPath(id)}/answer`,json(body)),
-  decide: (id: string, code: string, body: Decision) => request<Verdict>(`${auditPath(id)}/verdicts/${encodeURIComponent(code)}`,json(body)),
-  letter: (id:string,code:string,signal?:AbortSignal) => request<Letter>(`${auditPath(id)}/letter/${encodeURIComponent(code)}`,{signal}),
+  job: (id: string, signal?: AbortSignal) => request<AuditResult>(auditPath(id),{signal}),
+  answer: (id: string, body: AnswerRequest) => request<AuditResult>(`${auditPath(id)}/answer`,json(body)),
+  decide: (id: string, code: string, body: VerdictRequest) => request<CodeVerdict>(`${auditPath(id)}/verdicts/${encodeURIComponent(code)}`,json(body)),
+  letter: (id:string,code:string,signal?:AbortSignal) => request<LetterResponse>(`${auditPath(id)}/letter/${encodeURIComponent(code)}`,{signal}),
   reportUrl: (id: string) => `${auditPath(id)}/report.csv`,
   letterUrl: (id:string,code:string) => `${auditPath(id)}/letter/${encodeURIComponent(code)}?download=true`,
 };
@@ -68,9 +68,12 @@ export function fileError(file:File | null): string | undefined {
   return undefined;
 }
 
-/** Returns the polling delay for active jobs and stops polling terminal jobs. */
-export function pollInterval(status: AuditJob['status'] | undefined): number | false {
-  return status === 'queued' || status === 'running' ? 1000 : false;
+/** Returns the polling delay for active jobs and stops polling terminal jobs.
+ * Keeps polling through "awaiting_input" too: answering a question resumes the
+ * investigation in the background, so the UI needs to keep checking until it
+ * actually reaches "complete" (or a new question comes up). */
+export function pollInterval(status: AuditResult['status'] | undefined): number | false {
+  return status === 'complete' || status === 'failed' ? false : 1000;
 }
 
 /** Allows only HTTP and HTTPS links returned as supporting sources. */
@@ -80,4 +83,9 @@ export function safeSource(url: string | null | undefined): string | undefined {
 }
 
 export const money = (value:number) => new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:2}).format(value);
-export const statusLabels: Record<Verdict['status'],string> = {correct:'Correct',under:'Should count but does not',over:'Counts but should not',review:'Needs review'};
+export const statusLabels: Record<CodeVerdict['status'],string> = {
+  correct: 'Correct',
+  should_count: 'Should count but does not',
+  counts_but_shouldnt: 'Counts but should not',
+  needs_review: 'Needs review',
+};

@@ -11,8 +11,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Awards */
-        get: operations["awards_api_awards_get"];
+        /** List Awards */
+        get: operations["list_awards_api_awards_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -45,8 +45,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Poll */
-        get: operations["poll_api_audits__audit_id__get"];
+        /** Get Audit */
+        get: operations["get_audit_api_audits__audit_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -64,8 +64,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Answer */
-        post: operations["answer_api_audits__audit_id__answer_post"];
+        /** Answer Audit Question */
+        post: operations["answer_audit_question_api_audits__audit_id__answer_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -81,8 +81,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Decide */
-        post: operations["decide_api_audits__audit_id__verdicts__code__post"];
+        /** Set Verdict */
+        post: operations["set_verdict_api_audits__audit_id__verdicts__code__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -96,8 +96,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Report */
-        get: operations["report_api_audits__audit_id__report_csv_get"];
+        /** Get Report Csv */
+        get: operations["get_report_csv_api_audits__audit_id__report_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -113,8 +113,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Letter */
-        get: operations["letter_api_audits__audit_id__letter__code__get"];
+        /** Get Letter */
+        get: operations["get_letter_api_audits__audit_id__letter__code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** No Frontend Built */
+        get: operations["no_frontend_built__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -127,57 +144,68 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Answer */
-        Answer: {
+        /** AnswerRequest */
+        AnswerRequest: {
             /** Question Id */
             question_id: string;
             /** Answer */
             answer: string;
         };
-        /** AuditCreated */
-        AuditCreated: {
+        /** AuditCreateResponse */
+        AuditCreateResponse: {
             /** Audit Id */
             audit_id: string;
         };
-        /** AuditJob */
-        AuditJob: {
+        /** AuditProgress */
+        AuditProgress: {
+            /** Total Codes */
+            total_codes: number;
+            /** Processed Codes */
+            processed_codes: number;
+            /** Current Step */
+            current_step?: string | null;
+        };
+        /**
+         * AuditResult
+         * @description What GET /api/audits/{id} returns — partial while running, full once complete.
+         */
+        AuditResult: {
             /** Audit Id */
             audit_id: string;
+            /** Award Id */
+            award_id: string;
+            status: components["schemas"]["AuditStatus"];
+            progress: components["schemas"]["AuditProgress"];
             /**
-             * Status
-             * @enum {string}
+             * Verdicts
+             * @default []
              */
-            status: "queued" | "running" | "awaiting_input" | "complete" | "failed";
-            progress: components["schemas"]["Progress"];
-            result?: components["schemas"]["AuditResult"] | null;
-            pending_question?: components["schemas"]["Question"] | null;
+            verdicts: components["schemas"]["CodeVerdict"][];
+            pending_question?: components["schemas"]["ClarifyingQuestion"] | null;
             /** Error */
             error?: string | null;
             /**
-             * Preview
-             * @default true
+             * Created At
+             * Format: date-time
              */
-            preview: boolean;
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
-        /** AuditResult */
-        AuditResult: {
-            /** Business */
-            business: string;
-            /** Verdicts */
-            verdicts: components["schemas"]["Verdict"][];
-            summary: components["schemas"]["Summary"];
-        };
-        /** Award */
-        Award: {
+        /**
+         * AuditStatus
+         * @enum {string}
+         */
+        AuditStatus: "queued" | "running" | "awaiting_input" | "complete" | "failed";
+        /** AwardOption */
+        AwardOption: {
             /** Id */
             id: string;
             /** Name */
             name: string;
-            /**
-             * Preview
-             * @default true
-             */
-            preview: boolean;
         };
         /** Body_create_audit_api_audits_post */
         Body_create_audit_api_audits_post: {
@@ -194,83 +222,157 @@ export interface components {
              */
             mode: "keyword" | "no_rag" | "classifier" | "agent" | "full";
         };
-        /** Citation */
+        /**
+         * Citation
+         * @description A passage the classifier or investigator relied on.
+         */
         Citation: {
-            /** Clause */
-            clause: string;
-            /** Text */
-            text: string;
+            /** Source */
+            source: string;
+            /** Reference */
+            reference: string;
             /** Url */
             url?: string | null;
+            /** Retrieved Date */
+            retrieved_date?: string | null;
+            /** Text */
+            text?: string | null;
         };
-        /** Decision */
-        Decision: {
+        /**
+         * ClarifyingQuestion
+         * @description A specific, answerable question the agent asks the bookkeeper (spec section 6.5).
+         */
+        ClarifyingQuestion: {
+            /** Id */
+            id: string;
+            /** Code */
+            code: string;
+            /** Question */
+            question: string;
+            /** Context */
+            context?: string | null;
+        };
+        /**
+         * Classification
+         * @description Structured output of the classifier for one pay code (spec section 6.2).
+         */
+        Classification: {
+            /** Code */
+            code: string;
+            /** Normalised Name */
+            normalised_name: string;
+            /** Ato Category */
+            ato_category: string;
             /**
-             * Action
+             * Counts Towards Super
              * @enum {string}
              */
-            action: "approve" | "override";
+            counts_towards_super: "yes" | "no" | "unclear";
             /**
-             * Treatment
+             * Confidence
              * @enum {string}
              */
-            treatment: "yes" | "no" | "unclear";
+            confidence: "high" | "medium" | "low";
             /**
-             * Note
-             * @default
+             * Citations
+             * @default []
              */
-            note: string;
+            citations: components["schemas"]["Citation"][];
+            /** Reasoning */
+            reasoning: string;
+            /** Question For Reviewer */
+            question_for_reviewer?: string | null;
+        };
+        /**
+         * CodeVerdict
+         * @description The final, reviewable verdict for one pay code.
+         */
+        CodeVerdict: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "correct" | "should_count" | "counts_but_shouldnt" | "needs_review";
+            classification: components["schemas"]["Classification"];
+            /**
+             * Investigation
+             * @default []
+             */
+            investigation: components["schemas"]["InvestigationStep"][];
+            /** Verifier Agreed */
+            verifier_agreed?: boolean | null;
+            impact?: components["schemas"]["ImpactResult"] | null;
+            pending_question?: components["schemas"]["ClarifyingQuestion"] | null;
+            /** Reviewer Decision */
+            reviewer_decision?: ("approved" | "overridden") | null;
+            /** Override Note */
+            override_note?: string | null;
+            /** Overridden Counts Towards Super */
+            overridden_counts_towards_super?: ("yes" | "no" | "unclear") | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** Letter */
-        Letter: {
+        /**
+         * ImpactResult
+         * @description Exact dollar impact of one misclassified code (spec section 6.6). Always plain Python.
+         */
+        ImpactResult: {
             /** Code */
             code: string;
-            /** Text */
-            text: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "should_count_not_counted" | "counts_should_not";
+            /** Annual Amount */
+            annual_amount: number;
+            /** Super Amount */
+            super_amount: number;
+            /** Max Penalty Uplift */
+            max_penalty_uplift?: number | null;
+            /** Note */
+            note: string;
+        };
+        /**
+         * InvestigationStep
+         * @description One step of the investigator agent's bounded reasoning loop (spec section 6.3).
+         */
+        InvestigationStep: {
+            /** Step Number */
+            step_number: number;
+            /**
+             * Tool
+             * @enum {string}
+             */
+            tool: "get_payment_history" | "search_ato_guidance" | "search_award" | "calculate_impact" | "ask_bookkeeper";
+            /** Input */
+            input: {
+                [key: string]: unknown;
+            };
+            /** Output */
+            output: string;
+            citation?: components["schemas"]["Citation"] | null;
+        };
+        /** LetterResponse */
+        LetterResponse: {
+            /** Code */
+            code: string;
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
             /**
              * Draft
              * @default true
              */
             draft: boolean;
-        };
-        /** Progress */
-        Progress: {
-            /** Completed */
-            completed: number;
-            /** Total */
-            total: number;
-            /** Message */
-            message: string;
-        };
-        /** Question */
-        Question: {
-            /** Id */
-            id: string;
-            /** Code */
-            code: string;
-            /** Text */
-            text: string;
-            /** Context */
-            context: string;
-        };
-        /** Step */
-        Step: {
-            /** Tool */
-            tool: string;
-            /** Summary */
-            summary: string;
-        };
-        /** Summary */
-        Summary: {
-            /** Shortfall */
-            shortfall: number;
-            /** Overpayment */
-            overpayment: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -285,38 +387,17 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
-        /** Verdict */
-        Verdict: {
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
+        /** VerdictRequest */
+        VerdictRequest: {
             /**
-             * Status
+             * Decision
              * @enum {string}
              */
-            status: "correct" | "under" | "over" | "review";
-            /**
-             * Counts Towards Super
-             * @enum {string}
-             */
-            counts_towards_super: "yes" | "no" | "unclear";
-            /**
-             * Confidence
-             * @enum {string}
-             */
-            confidence: "high" | "medium" | "low";
-            /** Annual Impact */
-            annual_impact: number;
-            /** Reasoning */
-            reasoning: string;
-            /** Citations */
-            citations: components["schemas"]["Citation"][];
-            /** Steps */
-            steps: components["schemas"]["Step"][];
-            /** Verifier */
-            verifier: string;
-            decision?: components["schemas"]["Decision"] | null;
+            decision: "approved" | "overridden";
+            /** Note */
+            note?: string | null;
+            /** Overridden Counts Towards Super */
+            overridden_counts_towards_super?: ("yes" | "no" | "unclear") | null;
         };
     };
     responses: never;
@@ -327,7 +408,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    awards_api_awards_get: {
+    list_awards_api_awards_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -342,7 +423,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Award"][];
+                    "application/json": components["schemas"]["AwardOption"][];
                 };
             };
         };
@@ -366,7 +447,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditCreated"];
+                    "application/json": components["schemas"]["AuditCreateResponse"];
                 };
             };
             /** @description Validation Error */
@@ -380,7 +461,7 @@ export interface operations {
             };
         };
     };
-    poll_api_audits__audit_id__get: {
+    get_audit_api_audits__audit_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -397,7 +478,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditJob"];
+                    "application/json": components["schemas"]["AuditResult"];
                 };
             };
             /** @description Validation Error */
@@ -411,7 +492,7 @@ export interface operations {
             };
         };
     };
-    answer_api_audits__audit_id__answer_post: {
+    answer_audit_question_api_audits__audit_id__answer_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -422,7 +503,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Answer"];
+                "application/json": components["schemas"]["AnswerRequest"];
             };
         };
         responses: {
@@ -432,7 +513,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditJob"];
+                    "application/json": components["schemas"]["AuditResult"];
                 };
             };
             /** @description Validation Error */
@@ -446,7 +527,7 @@ export interface operations {
             };
         };
     };
-    decide_api_audits__audit_id__verdicts__code__post: {
+    set_verdict_api_audits__audit_id__verdicts__code__post: {
         parameters: {
             query?: never;
             header?: never;
@@ -458,7 +539,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Decision"];
+                "application/json": components["schemas"]["VerdictRequest"];
             };
         };
         responses: {
@@ -468,7 +549,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Verdict"];
+                    "application/json": components["schemas"]["CodeVerdict"];
                 };
             };
             /** @description Validation Error */
@@ -482,7 +563,7 @@ export interface operations {
             };
         };
     };
-    report_api_audits__audit_id__report_csv_get: {
+    get_report_csv_api_audits__audit_id__report_csv_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -513,7 +594,7 @@ export interface operations {
             };
         };
     };
-    letter_api_audits__audit_id__letter__code__get: {
+    get_letter_api_audits__audit_id__letter__code__get: {
         parameters: {
             query?: {
                 download?: boolean;
@@ -533,7 +614,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Letter"];
+                    "application/json": components["schemas"]["LetterResponse"];
                 };
             };
             /** @description Validation Error */
@@ -543,6 +624,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    no_frontend_built__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

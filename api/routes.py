@@ -9,7 +9,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from auditor.ingest import IngestError, load_paycodes, load_payruns
@@ -22,9 +22,7 @@ from auditor.schemas import (
     AuditResult,
     AwardOption,
     CodeVerdict,
-    FieldError,
     LetterResponse,
-    ValidationErrorResponse,
     VerdictRequest,
 )
 
@@ -49,8 +47,9 @@ def _fixture_verdicts() -> tuple[CodeVerdict, ...]:
 
 
 def _validation_error(field: str, message: str) -> JSONResponse:
-    body = ValidationErrorResponse(errors=[FieldError(field=field, message=message)])
-    return JSONResponse(status_code=422, content=body.model_dump())
+    # Same shape FastAPI's own request validation already returns, so the frontend has
+    # one error format to handle regardless of whether we or FastAPI raised it.
+    return JSONResponse(status_code=422, content={"detail": [{"loc": ["body", field], "msg": message}]})
 
 
 @router.get("/awards", response_model=list[AwardOption])
@@ -125,7 +124,9 @@ async def set_verdict(audit_id: str, code: str, body: VerdictRequest) -> CodeVer
     if job is None:
         raise HTTPException(status_code=404, detail=f"no audit found with id {audit_id!r}")
     try:
-        return jobs.set_verdict_decision(job, code, body.decision, body.note)
+        return jobs.set_verdict_decision(
+            job, code, body.decision, body.note, body.overridden_counts_towards_super
+        )
     except jobs.JobError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -144,11 +145,18 @@ async def get_report_csv(audit_id: str) -> Response:
 
 
 @router.get("/audits/{audit_id}/letter/{code}", response_model=LetterResponse)
-async def get_letter(audit_id: str, code: str) -> LetterResponse:
+async def get_letter(audit_id: str, code: str, download: bool = Query(False)):
     job = jobs.get_job(audit_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"no audit found with id {audit_id!r}")
     verdict = next((v for v in job.verdicts if v.code == code), None)
     if verdict is None:
         raise HTTPException(status_code=404, detail=f"no verdict found for code {code!r}")
-    return draft_letter(verdict)
+    letter = draft_letter(verdict)
+    if download:
+        return Response(
+            content=f"{letter.subject}\n\n{letter.body}",
+            media_type="text/plain",
+            headers={"Content-Disposition": f'attachment; filename="letter_{code}.txt"'},
+        )
+    return letter

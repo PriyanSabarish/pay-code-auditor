@@ -20,6 +20,7 @@ from auditor.schemas import (
     AuditStatus,
     CodeVerdict,
     ReviewerDecision,
+    SuperCountsStatus,
 )
 
 from .config import FAKE_STEP_DELAY_SECONDS
@@ -68,12 +69,17 @@ def _save(job: AuditJob) -> None:
 
 
 def set_verdict_decision(
-    job: AuditJob, code: str, decision: ReviewerDecision, note: str | None
+    job: AuditJob,
+    code: str,
+    decision: ReviewerDecision,
+    note: str | None,
+    overridden_counts_towards_super: SuperCountsStatus | None = None,
 ) -> CodeVerdict:
     for v in job.verdicts:
         if v.code == code:
             v.reviewer_decision = decision
             v.override_note = note
+            v.overridden_counts_towards_super = overridden_counts_towards_super
             _save(job)
             return v
     raise JobError(f"no verdict found for code {code!r} in audit {job.audit_id}")

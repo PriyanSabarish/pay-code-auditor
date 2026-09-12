@@ -10,10 +10,9 @@ describe('HTTP boundary',()=>{
     expect(parseError({detail:'Audit expired'},404).message).toBe('Audit expired');
     expect(parseError('<html>proxy failed</html>',502).message).toContain('502');
   });
-  it('polls only active jobs',()=>{
-    expect(pollInterval('running')).toBe(1000);
-    expect(pollInterval('queued')).toBe(1000);
-    for(const status of ['complete','failed','awaiting_input'] as const)expect(pollInterval(status)).toBe(false);
+  it('polls until the job reaches a terminal state',()=>{
+    for(const status of ['running','queued','awaiting_input'] as const)expect(pollInterval(status)).toBe(1000);
+    for(const status of ['complete','failed'] as const)expect(pollInterval(status)).toBe(false);
   });
   it('rejects unsafe citation protocols',()=>{
     expect(safeSource('javascript:alert(1)')).toBeUndefined();
