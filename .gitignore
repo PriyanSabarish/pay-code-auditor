@@ -7,3 +7,6 @@ web/dist/
 data/samples/*_answer_key.csv
 .pytest_cache/
 .claude/
+web/.env.local
+web/coverage/
+web/*.tsbuildinfo

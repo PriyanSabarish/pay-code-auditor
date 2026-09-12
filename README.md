@@ -8,9 +8,6 @@ draft the fix and a client letter. A person approves every change.
 
 Primary customer: bookkeepers and BAS agents who run payroll for many small-business clients.
 
-See [`Pay-Code-Auditor-48h-Plan-FastAPI-React.docx`](../Pay-Code-Auditor-48h-Plan-FastAPI-React.docx)
-for the full team build plan (revision 2 — supersedes the earlier Streamlit spec).
-
 ## Architecture
 
 One deployed service. FastAPI serves the API under `/api` and the built React bundle as
@@ -27,21 +24,13 @@ pay-code-auditor/
     llm.py      # Groq client + cascade tier selection
     knowledge/  agent/  (retrieval.py, prompts.py, classify.py, verifier.py, memory.py,
                  remediation.py land through the build)
-  web/          # React app (Vite + TS + Tailwind) — IT's lane, not scaffolded here yet
+  web/          # React app (Vite + TypeScript + Tailwind)
   data/  eval/  tests/
 ```
 
-## Team lanes and file ownership
-
-| Lane | Owns |
-|---|---|
-| **A — AI, orchestration, API** (this session's scope) | `auditor/schemas.py` (frozen), `api/`, `auditor/{retrieval,prompts,classify,agent/,verifier,memory,remediation}.py`, `tests/{test_tools,test_retrieval,test_api}.py` |
-| **B — Data science** | `auditor/{ingest,impact,report}.py`, `auditor/knowledge/`, `data/`, `eval/`, `tests/test_impact.py` |
-| **C — IT** | `web/` entirely |
-
 `web/src/api/types.ts` is generated, never hand-edited — see below.
 
-## Status (Lane A)
+## Current backend status
 
 - [x] `auditor/schemas.py` frozen — `PayCode`, `PayRunRow`, `Citation`, `Classification`, `InvestigationStep`, `ClarifyingQuestion`, `CodeVerdict`, `AuditResult`, `AuditJob`, plus the API request/response bodies
 - [x] All seven API routes live behind `FAKE_DATA=1` (default), backed by a fixture with all four verdict statuses, a full five-step investigation trail, and a paused clarifying question
@@ -70,9 +59,9 @@ pay-code-auditor/
 | `GET /api/audits/{id}/letter/{code}` | Draft client letter for one approved flag |
 
 `GET /openapi.json` is live once the API is running — that's what
-`npx openapi-typescript http://localhost:8000/openapi.json -o src/api/types.ts` (IT's job,
-inside `web/`) generates types from. `auditor/schemas.py` is the source of truth; any
-change to it must be announced so `ingest.py` (Data) and the generated types (IT) stay in sync.
+`npx openapi-typescript http://localhost:8000/openapi.json -o src/api/types.ts`, run inside
+`web/`, generates the frontend types. `auditor/schemas.py` is the source of truth; schema
+changes require regenerating the TypeScript definitions.
 
 ## Model choices
 
@@ -111,16 +100,7 @@ uvicorn api.main:app --reload --port 8000
 Visit `http://localhost:8000/docs` for the live OpenAPI page, or `http://localhost:8000/`
 once `web/dist` exists.
 
-Deployment (Render/Railway, one web service, **one worker** — the job store is in-process
-memory):
-
-```
-# build
-cd web && npm ci && npm run build && cd .. && pip install -r requirements.txt
-
-# start
-uvicorn api.main:app --host 0.0.0.0 --port $PORT --workers 1
-```
+Frontend setup and development checks are documented in [`web/README.md`](web/README.md).
 
 ## Data format
 
