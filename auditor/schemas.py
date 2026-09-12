@@ -30,7 +30,7 @@ class AuditStatus(str, Enum):
     FAILED = "failed"
 
 
-# --- Input data -------------------------------------------------------------------
+# Input data — what a bookkeeper uploads
 
 
 class PayCode(BaseModel):
@@ -58,7 +58,7 @@ class PayRunRow(BaseModel):
     overtime_hours: Optional[float] = None
 
 
-# --- Classification, retrieval and investigation -----------------------------------
+# Classification, retrieval and investigation
 
 
 class Citation(BaseModel):
@@ -147,7 +147,7 @@ class CodeVerdict(BaseModel):
     override_note: Optional[str] = None
 
 
-# --- Audit job / API-facing result --------------------------------------------------
+# The audit job and what the API returns for it
 
 
 class AuditProgress(BaseModel):
@@ -196,7 +196,7 @@ class AuditJob(BaseModel):
         )
 
 
-# --- API request/response bodies ----------------------------------------------------
+# Request and response bodies for the routes
 
 
 class AwardOption(BaseModel):
