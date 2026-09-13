@@ -178,8 +178,8 @@ blockquote a { display: inline-flex; align-items: center; gap: 5px; color: var(-
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .section-heading h1 { margin-top: 5px; font-size: clamp(30px, 3.3vw, 42px); letter-spacing: -1.2px; }
 .eyebrow, .small-mono { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.05px; }
-.workspace-grid { display: grid; }
-.workspace-panel { padding: 25px; }
+.workspace-grid { display: grid; justify-content: center; }
+.workspace-panel { width: min(100%, 640px); padding: 25px; }
 .stepper { display: flex; padding: 0 0 19px; margin: 0 0 21px; border-bottom: 1px solid var(--line); list-style: none; }
 .stepper li { display: flex; align-items: center; gap: 9px; flex: 1; color: var(--muted); font-size: 11px; font-weight: 550; text-transform: uppercase; }
 .stepper li:nth-child(2) { justify-content: center; }
