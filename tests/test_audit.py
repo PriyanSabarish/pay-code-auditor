@@ -139,6 +139,44 @@ def test_ask_bookkeeper_loop_resumes_until_complete(monkeypatch):
     assert verdict.status == "should_count"
 
 
+def test_fresh_bookkeeper_answer_is_recorded_in_the_trail(monkeypatch):
+    """tools.ask_bookkeeper's step output is a generic "Paused..." placeholder — without
+    rewriting it here, a freshly-answered pause looks identical to one that was never
+    resolved once the audit completes, and the actual question/answer are lost from the
+    permanent record (they only ever existed in the transient pending_question)."""
+
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    question = ClarifyingQuestion(id="q1", code="SITE ALLOW", question="Ordinary time?")
+    paused = InvestigationOutcome(
+        steps=[InvestigationStep(step_number=1, tool="ask_bookkeeper", input={"question": "Ordinary time?"}, output="Paused.")],
+        status="awaiting_input",
+        pending_question=question,
+    )
+    resumed = InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high"))
+
+    calls = {"n": 0}
+    captured_resume_steps = []
+    def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return paused
+        captured_resume_steps.append(resume_steps)
+        return resumed
+    monkeypatch.setattr(audit, "investigate", fake_investigate)
+
+    audit.audit_one_code(
+        make_paycode(counts_for_super="N"), PAYRUNS, mode="agent",
+        ask_bookkeeper=lambda q: "Yes, ordinary time.",
+    )
+    resumed_steps = captured_resume_steps[0]
+    assert "Ordinary time?" in resumed_steps[-1].output
+    assert "Yes, ordinary time." in resumed_steps[-1].output
+    assert resumed_steps[-1].output != "Paused."
+
+
 def test_remembered_answer_is_used_without_calling_ask_bookkeeper(monkeypatch):
     """Spec 6.5: an already-answered code pattern for this bookkeeper skips asking
     again entirely — the audit shouldn't even pause for a human this time."""
@@ -187,7 +225,13 @@ def test_a_new_answer_is_remembered_for_next_time(monkeypatch):
         lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
     )
     question = ClarifyingQuestion(id="q1", code="SITE ALLOW", question="Ordinary time?")
-    paused = InvestigationOutcome(steps=[], status="awaiting_input", pending_question=question)
+    paused = InvestigationOutcome(
+        # A real investigate() always appends the ask_bookkeeper step before pausing —
+        # never an empty list — so this matches that rather than a shape that can't
+        # actually occur.
+        steps=[InvestigationStep(step_number=1, tool="ask_bookkeeper", input={"question": "Ordinary time?"}, output="Paused.")],
+        status="awaiting_input", pending_question=question,
+    )
     resumed = InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high"))
     calls = {"n": 0}
     def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):

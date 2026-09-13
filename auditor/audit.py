@@ -123,6 +123,17 @@ def _resolve_pending_questions(
         elif ask_bookkeeper is not None:
             answer = ask_bookkeeper(question)
             memory.get_memory().remember(bookkeeper_id, pay_code.code, question.question, answer)
+            # Same reasoning as the memory branch above: without this, the evidence
+            # trail's ask_bookkeeper step is stuck on tools.py's generic "Paused —
+            # waiting on the bookkeeper's answer." forever, even after a real answer
+            # resolves it — the question and answer would exist only in the transient
+            # pending_question shown while paused, gone from the permanent record once
+            # the audit completes.
+            steps = steps[:-1] + [
+                steps[-1].model_copy(
+                    update={"output": f"Bookkeeper asked: \"{question.question}\" — Answered: {answer}"}
+                )
+            ]
         else:
             break  # no memory of this code and no one to ask — keep the trail, stay unclear
         outcome = investigate(
