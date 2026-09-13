@@ -66,7 +66,7 @@ def keyword_guess(pay_code: PayCode) -> Optional[SuperCountsStatus]:
     return None
 
 
-def build_context(pay_code: PayCode, top_k: int = 3) -> Optional[str]:
+def build_context(pay_code: PayCode, top_k: int = 5) -> Optional[str]:
     """Retrieve ATO and award passages for one code (spec 6.2's "award-aware" step).
 
     The caller decides whether to use this at all — passing context=None to

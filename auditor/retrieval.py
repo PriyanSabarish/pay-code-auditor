@@ -87,6 +87,13 @@ _ACRONYM_EXPANSIONS = {
     "hrs": "hours",
     "pen": "penalty",
     "allow": "allowance",
+    "fdv": "family domestic violence",
+    "term": "termination",
+    # Not itself an acronym, but "tool allowance" is the textbook example of an expense
+    # allowance and shares no token at all with the ATO chunk that governs it ("expense
+    # allowances... fully expended") — dev-set eval showed TOOLALLOW ranked outside top 8
+    # without this nudge.
+    "tool": "expense",
 }
 _ACRONYM_RE = re.compile(
     r"\b(" + "|".join(re.escape(a) for a in _ACRONYM_EXPANSIONS) + r")\b", re.IGNORECASE

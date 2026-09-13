@@ -64,13 +64,18 @@ above, or the given context's source when it applies),
   "question_for_reviewer": string or null, a specific question ONLY if genuinely unclear
 }}
 Use "unclear" whenever the name and payment pattern do not clearly settle it — never guess. \
-If the retrieved context contains more than one entry with different qualifying-earnings \
-verdicts (for example, one rule says a payment counts and another says the same kind of \
-payment does not, depending on circumstance), that is a sign the code is genuinely unclear \
-unless the payment pattern tells you which circumstance applies — do not silently pick \
-whichever entry sounds closer to the code's name. In that case, cite both conflicting \
-entries and ask a question_for_reviewer that names the specific distinguishing fact you \
-are missing (for example, which of two circumstances the payment was made under)."""
+The retrieved context will usually contain several entries about unrelated payment types \
+with different qualifying-earnings verdicts (that is normal and not a conflict) — only treat \
+it as a real conflict when two or more entries describe the SAME payment type as this code \
+(for example, two entries both about long service leave, one paid in-house and one under a \
+portable scheme) and disagree depending on a circumstance the code's name and payment pattern \
+don't specify. Ignore entries about a different payment type entirely, even if their verdict \
+disagrees with the one entry that actually matches this code. When only one entry genuinely \
+matches and the code's name gives no signal that a named exception applies, follow that \
+entry's verdict rather than defaulting to unclear — the exception must be indicated by the \
+code, not assumed. When there is a genuine same-payment-type conflict, cite both conflicting \
+entries and ask a question_for_reviewer that names the specific distinguishing fact you are \
+missing (for example, which of two circumstances the payment was made under)."""
 
 CLASSIFICATION_USER_TEMPLATE = """\
 Pay code: {code}
