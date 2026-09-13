@@ -62,6 +62,13 @@ class ToolCall:
     id: str
     name: str
     arguments: dict
+    # Gemini-only: a signature attached to the response Part (not the call itself) that
+    # must be echoed back verbatim when this call is replayed as history, or a later
+    # generateContent call hard-rejects with 400 INVALID_ARGUMENT. None on Groq, and None
+    # for a synthetic ToolCall investigator.py rebuilds from a persisted InvestigationStep
+    # after a real ask_bookkeeper pause — Gemini has no way to resume across that boundary
+    # without re-triggering this error, since the signature was never in the frozen schema.
+    thought_signature: Optional[bytes] = None
 
 
 @dataclass
@@ -155,13 +162,26 @@ def _to_gemini_contents(messages: list[dict]) -> tuple[Optional[str], list[genai
     call to its result — Gemini doesn't need them (it correlates by turn order), so they
     only need to survive long enough here to attach the right function *name* to each
     result; they're discarded once translated.
+
+    A function_call Part replayed as history must carry the exact thought_signature
+    Gemini attached to it originally — a missing one is a hard 400, and a fabricated one
+    is rejected too ("Corrupted thought signature": this is checked for real, not just
+    presence). A synthetic ToolCall investigator.py rebuilds from a persisted
+    InvestigationStep after a real ask_bookkeeper pause never has one (the frozen schema
+    has no room for an opaque provider signature), so any such call — and its paired
+    tool result — is represented as plain descriptive text instead of a literal
+    function_call/function_response pair. That sidesteps the requirement entirely rather
+    than fighting it, at the cost of the model re-reading a plain-English description of
+    what it already did instead of structured history for that one step.
     """
 
     system_instruction: Optional[str] = None
     contents: list[genai_types.Content] = []
     call_names: dict[str, str] = {}
 
-    for message in messages:
+    i = 0
+    while i < len(messages):
+        message = messages[i]
         role = message["role"]
         if role == "system":
             system_instruction = message["content"]
@@ -169,16 +189,32 @@ def _to_gemini_contents(messages: list[dict]) -> tuple[Optional[str], list[genai
             contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=message["content"])]))
         elif role == "assistant":
             tool_calls = message.get("tool_calls")
-            if tool_calls:
+            if tool_calls and all(call.get("thought_signature") for call in tool_calls):
                 parts = []
                 for call in tool_calls:
                     call_names[call["id"]] = call["function"]["name"]
                     raw_args = call["function"]["arguments"]
                     args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
-                    parts.append(genai_types.Part(function_call=genai_types.FunctionCall(
-                        id=call["id"], name=call["function"]["name"], args=args,
-                    )))
+                    parts.append(genai_types.Part(
+                        function_call=genai_types.FunctionCall(id=call["id"], name=call["function"]["name"], args=args),
+                        thought_signature=call["thought_signature"],
+                    ))
                 contents.append(genai_types.Content(role="model", parts=parts))
+            elif tool_calls:
+                descriptions = []
+                for call in tool_calls:
+                    raw_args = call["function"]["arguments"]
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    descriptions.append(f"Called tool {call['function']['name']} with arguments {args}.")
+                contents.append(genai_types.Content(role="model", parts=[genai_types.Part(text=" ".join(descriptions))]))
+                # Consume the tool-result message(s) this call produced (they immediately
+                # follow, one per call, per investigator.py's message-building order) as
+                # plain text too, so no dangling function_response references this turn.
+                results = []
+                while i + 1 < len(messages) and messages[i + 1]["role"] == "tool" and len(results) < len(tool_calls):
+                    i += 1
+                    results.append(messages[i]["content"])
+                contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text="Tool result: " + " ".join(results))]))
             else:
                 contents.append(genai_types.Content(role="model", parts=[genai_types.Part(text=message.get("content") or "")]))
         elif role == "tool":
@@ -188,6 +224,7 @@ def _to_gemini_contents(messages: list[dict]) -> tuple[Optional[str], list[genai
             ))]))
         else:
             raise ValueError(f"unsupported message role for gemini: {role!r}")
+        i += 1
     return system_instruction, contents
 
 
@@ -228,6 +265,15 @@ def _complete_gemini(
         config_kwargs["tool_config"] = genai_types.ToolConfig(
             function_calling_config=genai_types.FunctionCallingConfig(mode=mode)
         )
+        # "Thinking" models attach a thought_signature to each function-call part and
+        # require it echoed back verbatim in later turns, or generateContent hard-rejects
+        # the request (400 INVALID_ARGUMENT). investigator.py's resumable step loop
+        # persists steps as the frozen InvestigationStep schema (no room for an opaque
+        # provider signature) and can pause for a real human answer between turns, so
+        # there's no reliable way to carry a signature across that boundary — disabling
+        # thinking for tool-calling turns sidesteps the requirement entirely rather than
+        # fighting an architecture mismatch that only Gemini's "thinking" models create.
+        config_kwargs["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=0)
     config = genai_types.GenerateContentConfig(**config_kwargs)
 
     for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
@@ -260,7 +306,10 @@ def _complete_gemini(
             for i, part in enumerate(candidate.content.parts):
                 if part.function_call is not None:
                     call = part.function_call
-                    tool_calls.append(ToolCall(id=call.id or f"call_{i}", name=call.name, arguments=dict(call.args or {})))
+                    tool_calls.append(ToolCall(
+                        id=call.id or f"call_{i}", name=call.name, arguments=dict(call.args or {}),
+                        thought_signature=part.thought_signature,
+                    ))
                 elif part.text:
                     text_parts.append(part.text)
 

@@ -22,9 +22,9 @@ def _use_gemini_provider(monkeypatch):
 def _fake_response(text: str = "", function_calls: list[tuple[str, dict]] | None = None):
     parts = []
     if text:
-        parts.append(SimpleNamespace(text=text, function_call=None))
+        parts.append(SimpleNamespace(text=text, function_call=None, thought_signature=None))
     for name, args in function_calls or []:
-        parts.append(SimpleNamespace(text=None, function_call=SimpleNamespace(id=None, name=name, args=args)))
+        parts.append(SimpleNamespace(text=None, function_call=SimpleNamespace(id=None, name=name, args=args), thought_signature=b"sig"))
     candidate = SimpleNamespace(content=SimpleNamespace(parts=parts))
     usage = SimpleNamespace(prompt_token_count=12, candidates_token_count=6, total_token_count=18)
     return SimpleNamespace(candidates=[candidate], usage_metadata=usage)
@@ -69,18 +69,39 @@ def test_translates_function_call_into_tool_call(monkeypatch):
 
 def test_resumed_tool_conversation_translates_all_roles(monkeypatch):
     """A full assistant tool_call + tool result round trip, as investigator.py builds it,
-    must translate without raising — this is the shape _rebuild_messages actually sends."""
+    must translate without raising — this is the shape _rebuild_messages actually sends.
+    With a real thought_signature present, it should stay a structured function_call/
+    function_response pair (not fall back to plain text)."""
     fake = _install_fake_client(monkeypatch, [_fake_response(text="done")])
     messages = [
         {"role": "system", "content": "sys"},
         {"role": "user", "content": "investigate PILN"},
-        {"role": "assistant", "tool_calls": [{"id": "step-1", "type": "function", "function": {"name": "get_payment_history", "arguments": "{}"}}]},
+        {"role": "assistant", "tool_calls": [{"id": "step-1", "type": "function", "function": {"name": "get_payment_history", "arguments": "{}"}, "thought_signature": b"real-sig"}]},
         {"role": "tool", "tool_call_id": "step-1", "content": "paid fortnightly"},
     ]
     result = llm.complete(messages, tier="strong")
     assert result.text == "done"
     contents = fake.calls[0]["contents"]
     assert contents[-1].parts[0].function_response.name == "get_payment_history"
+
+
+def test_signature_less_resumed_call_falls_back_to_plain_text(monkeypatch):
+    """A synthetic ToolCall rebuilt from a persisted InvestigationStep (after a real
+    ask_bookkeeper pause) never has a thought_signature — Gemini hard-rejects a
+    function_call Part without one (and rejects a fabricated one as corrupted), so this
+    must translate to plain descriptive text instead of a literal function_call/
+    function_response pair, with no thought_signature field required at all."""
+    fake = _install_fake_client(monkeypatch, [_fake_response(text="done")])
+    messages = [
+        {"role": "user", "content": "investigate RDO PAYOUT"},
+        {"role": "assistant", "tool_calls": [{"id": "step-1", "type": "function", "function": {"name": "ask_bookkeeper", "arguments": '{"question": "when?"}'}}]},
+        {"role": "tool", "tool_call_id": "step-1", "content": "while still employed"},
+    ]
+    llm.complete(messages, tier="strong")
+    contents = fake.calls[0]["contents"]
+    assert all(part.function_call is None for content in contents for part in content.parts)
+    assert any("ask_bookkeeper" in part.text for content in contents for part in content.parts if part.text)
+    assert any("while still employed" in part.text for content in contents for part in content.parts if part.text)
 
 
 def test_retries_after_rate_limit_then_succeeds(monkeypatch):

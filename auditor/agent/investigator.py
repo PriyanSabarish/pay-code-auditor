@@ -159,16 +159,16 @@ def _execute_tool(name: str, arguments: dict, *, pay_code: PayCode, payruns: lis
 
 
 def _tool_call_message(tool_call: llm.ToolCall) -> dict:
-    return {
-        "role": "assistant",
-        "tool_calls": [
-            {
-                "id": tool_call.id,
-                "type": "function",
-                "function": {"name": tool_call.name, "arguments": json.dumps(tool_call.arguments)},
-            }
-        ],
+    entry = {
+        "id": tool_call.id,
+        "type": "function",
+        "function": {"name": tool_call.name, "arguments": json.dumps(tool_call.arguments)},
     }
+    if tool_call.thought_signature is not None:
+        # Gemini-only — see llm.ToolCall.thought_signature. Groq's ToolCall never sets
+        # this, so this key simply never appears when running against Groq.
+        entry["thought_signature"] = tool_call.thought_signature
+    return {"role": "assistant", "tool_calls": [entry]}
 
 
 def _tool_result_message(tool_call_id: str, content: str) -> dict:
