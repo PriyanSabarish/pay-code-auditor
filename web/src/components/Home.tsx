@@ -1,22 +1,14 @@
-import { useRef, useState } from 'react';
-import { ArrowRight, Check, FileSearch, FileText, Layers3, Play, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, FileSearch, FileText, Layers3, ShieldCheck } from 'lucide-react';
 
 /** Introduces the workflow with a clearly illustrative evidence preview. */
 export default function Home({onStart}:{onStart:()=>void}) {
-  const [walkthrough,setWalkthrough]=useState(0);
-  const process=useRef<HTMLElement>(null);
-  /** Replays the connecting line without changing routes or resetting the workspace. */
-  const showWorkflow=()=>{
-    process.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'nearest'});
-    setWalkthrough(value=>value+1);
-  };
   return <main className="home-page">
     <section className="home-hero" aria-labelledby="home-title">
       <div className="hero-copy">
         <span className="hero-label"><span/> PAYROLL CLARITY, ONE CODE AT A TIME</span>
         <h1 id="home-title">Every pay code.<br/><em>A clearer picture.</em></h1>
         <p>Turn payroll exports into an evidence-led review. Spot potential superannuation discrepancies, understand the reasoning, and decide what happens next.</p>
-        <div className="hero-actions"><button className="hero-cta" onClick={onStart}>Open workspace <ArrowRight size={18}/></button><button className="how-it-works-button" onClick={showWorkflow} aria-controls="how-it-works"><span><Play size={13}/></span>How it works</button></div>
+        <div className="hero-actions"><button className="hero-cta" onClick={onStart}>Open workspace <ArrowRight size={18}/></button></div>
         <div className="hero-assurance"><ShieldCheck size={17}/><span>Evidence to guide you. Decisions that stay yours.</span></div>
       </div>
       <div className="hero-visual" aria-label="Illustrative payroll review preview">
@@ -33,9 +25,9 @@ export default function Home({onStart}:{onStart:()=>void}) {
         <div className="visual-caption">ILLUSTRATIVE REVIEW · YOUR RESULTS WILL VARY</div>
       </div>
     </section>
-    <section ref={process} className="home-process" id="how-it-works" aria-label="How it works">
+    <section className="home-process" id="how-it-works" aria-label="How it works">
       <div className="process-intro"><span className="eyebrow">A SIMPLE WORKFLOW</span><h2>Less searching.<br/>More understanding.</h2></div>
-      <div key={walkthrough} className={`process-steps ${walkthrough?'is-guided':''}`}>
+      <div className="process-steps">
       <div className="process-connector" aria-hidden="true"><i/></div>
       <article><div className="process-marker"><span className="process-number">01</span><FileText size={20}/></div><h3>Bring your records</h3><p>Select an award and upload your pay codes and payment history as CSV files.</p></article>
       <article><div className="process-marker"><span className="process-number">02</span><FileSearch size={20}/></div><h3>Follow the evidence</h3><p>Explore potential discrepancies, estimated impacts, and supporting reasoning.</p></article>

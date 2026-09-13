@@ -40,7 +40,7 @@ async function expandPreview(update:()=>void) {
   const animations: Animation[]=[];
   try {
     const headerBottom=document.querySelector('.app-bar')?.getBoundingClientRect().bottom??0;
-    // Soften the card content early, while retaining a faint preview until the crossfade.
+    // Soften the card content during expansion before crossfading to the workspace.
     const contentFade=snapshot.animate([{opacity:1},{opacity:.18}],{
       duration:440,delay:80,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'
     });
@@ -60,7 +60,6 @@ async function expandPreview(update:()=>void) {
     incoming?.pause();
     if(incoming)animations.push(incoming);
     await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
-    // A transparent transition surface lets both content layers blend at once.
     Object.assign(overlay.style,expanded,{background:'transparent',boxShadow:'none',borderColor:'transparent'});
     expansion.cancel();
     snapshot.style.background='transparent';
