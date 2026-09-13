@@ -1,0 +1,41 @@
+code,name,description,counts_for_super,payroll_category
+ORDHRS,Ordinary Hours,Base ordinary hours across all roles,Y,Wages
+PHNOTWORKED,Public Holiday Not Worked,"Public holiday paid at ordinary rate, not worked",Y,Wages
+CASLOAD,Casual Loading 25%,Casual loading on ordinary hours,Y,Loading
+PHPEN,Public Holiday Penalty,Public holiday penalty for hours worked,Y,Penalty
+EVEPEN,Evening Penalty,Penalty for ordinary hours worked after 7pm,Y,Penalty
+SATPEN,Saturday Penalty,Saturday ordinary hours penalty,Y,Penalty
+SUNPEN,Sunday Penalty,Sunday ordinary hours penalty,Y,Penalty
+BROKENSHIFT,Broken Shift Allowance,Compensation for a split rostered shift,Y,Allowance
+FIRSTAID,First Aid Allow,First aid officer allowance,N,Allowance
+FOODHANDLER,Food Handler Allowance,Food safety supervisor allowance,Y,Allowance
+KNIFEALLOW,Knife Allow,Chef's own knife allowance,Y,Allowance
+LAUNDRYALLOW,Laundry Allow,Uniform laundering allowance,N,Allowance
+UNIFORMALLOW,Uniform Allow,Flat uniform allowance regardless of expense,Y,Allowance
+MEALALLOWOT,OT Meal Allow,Overtime meal allowance,N,Allowance
+OT15,Overtime 1.5x,Overtime paid at time and a half,Y,Overtime
+OT20,Overtime 2x,Overtime paid at double time,N,Overtime
+ONCALLAH,On Call After Hours,On call allowance outside ordinary hours,N,Overtime
+TOILCASHOUT,TOIL Cashout,Cash out of time off in lieu,N,Leave
+RDOCASHOUT,RDO Cashout,"Cash out of a rostered day off, in service",Y,Leave
+ALCASHOUT,AL Cashout,"Cash out of annual leave, in service",Y,Leave
+ANNLV,Annual Leave,Paid annual leave taken,Y,Leave
+ALLOADING,AL Loading 17.5%,"Annual leave loading, general case",Y,Loading
+LSLINHOUSE,Long Service Leave,"Long service leave, not a portable scheme",Y,Leave
+SICKLV,Personal Leave,Paid personal and carers leave,Y,Leave
+FDVLEAVE,FDV Leave,Family and domestic violence leave,Y,Leave
+PPLEMPLOYER,PPL Employer,Employer paid parental leave,N,Leave
+JURYDUTY,Jury Duty Leave,Jury duty leave,N,Leave
+WCOMPWORKED,WComp Light Duties,"Workers compensation, light duties worked",Y,Leave
+WCOMPNOTWORK,WComp Not Worked,"Workers compensation, not required to work",N,Leave
+REFERRALBONUS,Referral Bonus,Bonus for referring a new staff member,Y,Bonus
+LOYALTYBON,Loyalty Bonus,Discretionary staff loyalty payment,N,Bonus
+STAFFMEAL,Staff Meal Allow,Allowance for meals during a shift,N,Allowance
+PILN,PILN,Payment in lieu of notice,Y,Termination
+REDUNDANCY,Redundancy Pmt,Genuine redundancy payment,N,Termination
+ALTERM,AL Payout Term,Unused annual leave paid on termination,N,Termination
+LSLTERM,LSL Payout Term,Unused long service leave paid on termination,N,Termination
+RDOTERM,RDO Payout Term,Unused RDO paid on termination,N,Termination
+DIRFEE,Director Fee,Working director's fee,Y,Director
+STUDYLEAVE,Study Leave,Paid study leave for a TAFE course,Y,Leave
+SPECIALLEAVE,Special Paid Leave,Compassionate or special paid leave,Y,Leave
