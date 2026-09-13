@@ -1,0 +1,9 @@
+code,messy_name,expected_counts_towards_super,ato_citation,rationale
+ORDHOURSCHECK,ORD HOURS,yes,S1-T01-R01,"Straightforward correct case, base ordinary hours pay"
+OVERTIMECHECK,OT 1.5X,no,S1-T09-R01,"Straightforward correct case, overtime is excluded once ordinary hours are identified"
+RDOAMBIGCHECK,RDO PAYOUT,unclear,S1-T06-R04 + S1-T13-R04,"Genuinely unclear, could be cashed out in service or paid on termination"
+COMMOUTHRSCHECK,COMM - WEEKEND DEAL,yes,S1-T10-R02,"Commission earned entirely outside ordinary hours still counts, the actual Payday Super change"
+BONUSOUTHRSCHECK,BONUS - WEEKEND ONLY,no,S1-T10-R09,"Same surface pattern as the commission case, opposite answer, tests whether the model actually distinguishes commission from bonus"
+WCOMPWORKEDCHECK,WCOMP - HOURS WORKED,yes,S1-T04-R01,"Workers compensation for hours actually worked counts"
+WCOMPNOTWORKCHECK,WCOMP - NOT REQUIRED,no,S1-T04-R02,"Same category, opposite answer, tests whether the model catches the worked-vs-not-worked distinction"
+LSLPORTABLECHECK,LSL - INDUSTRY SCHEME,no,S1-T02-R05,"Portable long service leave is excluded, unlike the same leave paid in-house"
