@@ -172,16 +172,21 @@ Does the cited rule support this conclusion?"""
 
 REMEDIATION_SYSTEM_PROMPT = """\
 You are drafting a short, plain-English letter from a bookkeeper to their client about one \
-pay code found during a Payday Super audit. Dollar figures are given to you already \
-calculated — never compute or restate them differently, just use the numbers you are given. \
-Write only the prose around them: what was found, why it matters, and that it is a draft \
-for professional review. Two to four short paragraphs. No legal or tax advice, no promises \
-about outcomes."""
+pay code found during a Payday Super audit. Write only the prose: what was found, why it \
+matters, and that it is a draft for professional review. Two to four short paragraphs. No \
+legal or tax advice, no promises about outcomes.
+
+You have NOT been given the actual dollar figures, and must never invent, estimate, or \
+compute one yourself — not even a rough figure. Wherever a dollar amount belongs in your \
+prose, write the exact placeholder token from the list below, character-for-character, \
+and nothing else in its place — no "$", no digits, no approximation alongside it. A \
+separate step substitutes the real figure afterward.
+
+Available placeholders for this letter: {available_placeholders}"""
 
 REMEDIATION_USER_TEMPLATE = """\
 Pay code: {code} ({name})
 Finding: {direction_description}
 Reasoning: {reasoning}
-Dollar impact (already calculated, use exactly as given): {impact_note}
 
-Draft the client letter body."""
+Draft the client letter body using only the placeholder tokens listed for any dollar amount."""

@@ -272,24 +272,28 @@ def investigate(
     calls: list[llm.CompletionResult] = []
 
     for _ in range(MAX_STEPS - len(steps)):
+        step_number = len(steps) + 1
+        print(f"[investigator] {pay_code.code}: step {step_number}/{MAX_STEPS} — calling model...", flush=True)
         result = llm.complete(messages, tier="strong", temperature=0.0, tools=TOOL_SCHEMAS, tool_choice="auto")
         calls.append(result)
 
         if not result.tool_calls:
+            print(f"[investigator] {pay_code.code}: step {step_number} — model concluded, validating...", flush=True)
             conclusion, extra_calls = _parse_conclusion(pay_code, messages, result.text)
             calls.extend(extra_calls)
             return InvestigationOutcome(steps=steps, status="complete", conclusion=conclusion, calls=calls)
 
         tool_call = result.tool_calls[0]
-        step_number = len(steps) + 1
 
         if tool_call.name not in TOOL_NAMES:
+            print(f"[investigator] {pay_code.code}: step {step_number} — unknown tool {tool_call.name!r}, retrying", flush=True)
             messages.append(_tool_call_message(tool_call))
             messages.append(
                 _tool_result_message(tool_call.id, f"Unknown tool {tool_call.name!r}. Choose one of: {TOOL_NAMES}.")
             )
             continue
 
+        print(f"[investigator] {pay_code.code}: step {step_number} -> tool={tool_call.name} args={tool_call.arguments}", flush=True)
         tool_result = _execute_tool(tool_call.name, tool_call.arguments, pay_code=pay_code, payruns=payruns)
         steps.append(
             InvestigationStep(
@@ -303,12 +307,15 @@ def investigate(
 
         if tool_call.name == "ask_bookkeeper":
             question: ClarifyingQuestion = tool_result.data
+            print(f"[investigator] {pay_code.code}: step {step_number} — pausing for bookkeeper answer", flush=True)
             return InvestigationOutcome(
                 steps=steps, status="awaiting_input", pending_question=question, calls=calls
             )
 
         messages.append(_tool_call_message(tool_call))
         messages.append(_tool_result_message(tool_call.id, tool_result.summary))
+
+    print(f"[investigator] {pay_code.code}: hit the {MAX_STEPS}-step limit without concluding", flush=True)
 
     forced_unclear = Classification(
         code=pay_code.code,

@@ -108,16 +108,25 @@ def _resolve_pending_questions(
     outcome = investigate(pay_code, payruns, classification)
     while outcome.status == "awaiting_input":
         question = outcome.pending_question
+        steps = outcome.steps
         remembered = memory.get_memory().recall(bookkeeper_id, pay_code.code)
         if remembered is not None:
             answer = remembered.answer
+            # Make it visible in the trail that this was answered from memory, not a
+            # fresh human pause — otherwise the two are indistinguishable to anyone
+            # looking at the results, which makes this feature unverifiable by eye.
+            steps = steps[:-1] + [
+                steps[-1].model_copy(
+                    update={"output": f"Answered from memory (recorded {remembered.stored_at[:10]}): {answer}"}
+                )
+            ]
         elif ask_bookkeeper is not None:
             answer = ask_bookkeeper(question)
             memory.get_memory().remember(bookkeeper_id, pay_code.code, question.question, answer)
         else:
             break  # no memory of this code and no one to ask — keep the trail, stay unclear
         outcome = investigate(
-            pay_code, payruns, classification, resume_steps=outcome.steps, resume_answer=answer
+            pay_code, payruns, classification, resume_steps=steps, resume_answer=answer
         )
     return outcome
 
@@ -131,6 +140,7 @@ def audit_one_code(
 ) -> CodeVerdict:
     """Classify, optionally investigate, optionally verify, and price one pay code."""
 
+    print(f"[audit] {pay_code.code}: classifying ({mode} mode)...", flush=True)
     investigation: list = []
 
     if mode == "keyword":
@@ -142,6 +152,7 @@ def audit_one_code(
 
         status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
         if mode in ("agent", "full") and _needs_investigation(classification, status):
+            print(f"[audit] {pay_code.code}: needs investigation (confidence={classification.confidence}, status={status})", flush=True)
             investigation_outcome = _resolve_pending_questions(
                 pay_code, payruns, classification, ask_bookkeeper, bookkeeper_id
             )
@@ -153,6 +164,7 @@ def audit_one_code(
 
     verifier_agreed: Optional[bool] = None
     if mode == "full" and _needs_investigation(classification, status):
+        print(f"[audit] {pay_code.code}: verifying conclusion...", flush=True)
         verifier_outcome = verify(classification)
         verifier_agreed = verifier_outcome.agrees
         if verifier_agreed is False:

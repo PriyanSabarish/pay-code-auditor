@@ -1,0 +1,9 @@
+code,name,description,counts_for_super,payroll_category
+ORD HRS,Ordinary Hours,,Y,Wages
+OT 1.5,Overtime 1.5x,,N,Overtime
+COMM Q3,Commission Q3,,N,Commission
+ON CALL (after hrs),On-Call Allowance (after hours),,Y,Allowance
+TOOL ALLOW (expended),Tool Allowance fully expended,,N,Allowance
+PILN,Payment in Lieu of Notice,,N,Termination
+DIR FEES,Directors Fees,,Y,Fees
+RDO PAYOUT,RDO Payout,,Y,Leave

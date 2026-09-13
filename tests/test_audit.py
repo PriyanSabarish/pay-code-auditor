@@ -156,10 +156,12 @@ def test_remembered_answer_is_used_without_calling_ask_bookkeeper(monkeypatch):
     resumed = InvestigationOutcome(steps=paused.steps, status="complete", conclusion=_classification("yes", "high"))
 
     calls = {"n": 0}
+    captured_resume_steps = []
     def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):
         calls["n"] += 1
         if calls["n"] == 1:
             return paused
+        captured_resume_steps.append(resume_steps)
         assert resume_answer == "Remembered: ordinary time."
         return resumed
     monkeypatch.setattr(audit, "investigate", fake_investigate)
@@ -172,6 +174,11 @@ def test_remembered_answer_is_used_without_calling_ask_bookkeeper(monkeypatch):
     verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent", ask_bookkeeper=fail_if_asked)
     assert calls["n"] == 2
     assert verdict.classification.counts_towards_super == "yes"
+    # The trail must say this was answered from memory, not a fresh human pause —
+    # otherwise the two look identical to anyone reading the results.
+    resumed_steps = captured_resume_steps[0]
+    assert "Answered from memory" in resumed_steps[-1].output
+    assert "Remembered: ordinary time." in resumed_steps[-1].output
 
 
 def test_a_new_answer_is_remembered_for_next_time(monkeypatch):
