@@ -34,8 +34,9 @@ router = APIRouter()
 FIXTURE_PATH = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "audit_result_sample.json"
 
 AWARDS = [
-    AwardOption(id="general_retail_2020", name="General Retail Industry Award 2020"),
-    AwardOption(id="restaurant_2020", name="Restaurant Industry Award 2020"),
+    # Matches the award Data fetched and cited for the café sample business
+    # (auditor/knowledge/sources.md, source S4). Update together if that ever changes.
+    AwardOption(id="hospitality_ma000009", name="Hospitality Industry (General) Award MA000009"),
 ]
 
 
