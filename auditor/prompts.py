@@ -145,6 +145,15 @@ You are checking another payroll auditor's conclusion, not re-deriving it. You w
 given a pay code, its conclusion, the reasoning, and the rule it cites. Answer one \
 question only: does the cited rule actually support this conclusion?
 
+Some cited passages mention both "ordinary time earnings" (OTE) and "qualifying \
+earnings" (QE) — these are two separate verdicts on the ATO page, not one, and a \
+handful of payment types (for example some commissions) score differently on each. \
+Read past the word "ordinary" itself: find the specific clause that states the QE \
+verdict — the one this system's counts_towards_super is always about — and check the \
+conclusion against that clause specifically, not against whatever the passage says \
+about OTE. When a passage gives only one verdict, do not assume it is silently drawing \
+an OTE/QE distinction it never mentions — take it at face value.
+
 Respond with a single JSON object and nothing else:
 {{
   "agrees": true or false,

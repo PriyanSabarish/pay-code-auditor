@@ -1,14 +1,17 @@
 """Real audit orchestration — classify every code, investigate the suspicious ones,
-price the exact dollar impact. This is what api/jobs.py drives in the background once
-FAKE_DATA=0, and what the eval harness will call directly later, bypassing HTTP.
+verify non-obvious conclusions, price the exact dollar impact. This is what api/jobs.py
+drives in the background once FAKE_DATA=0, and what the eval harness will call directly
+later, bypassing HTTP.
 
 Deliberately returns list[CodeVerdict] rather than a full AuditResult: an audit_id,
 status and timestamps are job-store concerns (api/jobs.py), not something a pure
 function calling the LLM cascade should have to fabricate for itself.
 
-Known gap: verifier.py doesn't exist yet, so "full" mode currently behaves exactly like
-"agent" mode — every CodeVerdict.verifier_agreed stays None. Update this file's "full"
-branch when the verifier lands.
+The verifier only runs in "full" mode, and only on non-obvious verdicts (the same test
+that triggers investigation) — spec 6.4 is a check on a conclusion someone should
+double-check, not a second opinion on every trivially-correct code. Counting how many
+times CodeVerdict.verifier_agreed is False across a set of verdicts is the "errors
+caught by the verifier" eval metric (spec section 10); no separate counter needed here.
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from .schemas import (
     PaymentHistory,
     VerdictStatus,
 )
+from .verifier import verify
 
 AskBookkeeper = Callable[[ClarifyingQuestion], str]
 OnVerdict = Callable[[CodeVerdict], None]
@@ -114,16 +118,16 @@ def audit_one_code(
     mode: AuditMode,
     ask_bookkeeper: Optional[AskBookkeeper] = None,
 ) -> CodeVerdict:
-    """Classify, optionally investigate, and price one pay code."""
+    """Classify, optionally investigate, optionally verify, and price one pay code."""
+
+    investigation: list = []
 
     if mode == "keyword":
         classification = _keyword_only_classification(pay_code)
-        investigation = []
     else:
         history = _history_for(pay_code.code, payruns)
         outcome = classify_code(pay_code, history) if mode == "no_rag" else classify_code_with_retrieval(pay_code, history)
         classification = outcome.classification
-        investigation = []
 
         status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
         if mode in ("agent", "full") and _needs_investigation(classification, status):
@@ -133,6 +137,14 @@ def audit_one_code(
                 classification = investigation_outcome.conclusion
 
     status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
+
+    verifier_agreed: Optional[bool] = None
+    if mode == "full" and _needs_investigation(classification, status):
+        verifier_outcome = verify(classification)
+        verifier_agreed = verifier_outcome.agrees
+        if verifier_agreed is False:
+            status = "needs_review"
+
     impact = _impact_for(pay_code, status, payruns)
 
     return CodeVerdict(
@@ -141,7 +153,7 @@ def audit_one_code(
         status=status,
         classification=classification,
         investigation=investigation,
-        verifier_agreed=None,  # verifier.py doesn't exist yet — see module docstring
+        verifier_agreed=verifier_agreed,
         impact=impact,
     )
 

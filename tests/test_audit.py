@@ -186,3 +186,74 @@ def test_run_audit_calls_progress_and_verdict_callbacks_in_order(monkeypatch):
     assert [v.code for v in verdicts] == ["A", "B"]
     assert [v.code for v in seen_verdicts] == ["A", "B"]
     assert seen_progress == [(1, 2, "A"), (2, 2, "B")]
+
+
+# --- verifier wiring (full mode only) -----------------------------------------------
+
+
+def test_verifier_not_called_outside_full_mode(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("yes", "high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high")))
+    def fail_if_called(classification):
+        raise AssertionError("verifier must not run outside full mode")
+    monkeypatch.setattr(audit, "verify", fail_if_called)
+    audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent")  # non-obvious, but not full
+
+
+def test_verifier_not_called_for_a_confident_correct_verdict_even_in_full_mode(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("no", "high"), escalated=False),
+    )
+    def fail_if_called(classification):
+        raise AssertionError("verifier must not run on an obvious, already-correct verdict")
+    monkeypatch.setattr(audit, "verify", fail_if_called)
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="full")
+    assert verdict.status == "correct"
+    assert verdict.verifier_agreed is None
+
+
+def test_verifier_agreement_is_recorded_and_status_unchanged(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("yes", "high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high")))
+    from auditor.verifier import VerifierOutcome
+    monkeypatch.setattr(audit, "verify", lambda classification: VerifierOutcome(agrees=True, note="Supported."))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="full")
+    assert verdict.verifier_agreed is True
+    assert verdict.status == "should_count"  # unchanged by agreement
+
+
+def test_verifier_disagreement_forces_needs_review_and_drops_impact(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("yes", "high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high")))
+    from auditor.verifier import VerifierOutcome
+    monkeypatch.setattr(audit, "verify", lambda classification: VerifierOutcome(agrees=False, note="The rule says the opposite."))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="full")
+    assert verdict.verifier_agreed is False
+    assert verdict.status == "needs_review"
+    assert verdict.impact is None  # needs_review isn't a priced status
+
+
+def test_verifier_none_result_does_not_change_status(monkeypatch):
+    """A verifier whose own output couldn't be validated is a shrug, not a disagreement
+    — it must never silently downgrade a verdict to needs_review."""
+
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("yes", "high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high")))
+    from auditor.verifier import VerifierOutcome
+    monkeypatch.setattr(audit, "verify", lambda classification: VerifierOutcome(agrees=None, note="Could not validate."))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="full")
+    assert verdict.verifier_agreed is None
+    assert verdict.status == "should_count"
