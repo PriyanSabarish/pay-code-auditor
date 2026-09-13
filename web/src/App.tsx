@@ -2,7 +2,7 @@ import { Component, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Alert, Button, Modal, Select } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowRight, CircleHelp, RotateCcw } from 'lucide-react';
+import { ArrowDownToLine, ArrowRight, CircleHelp, RotateCcw, ShieldCheck } from 'lucide-react';
 import { api, ApiError, fileError, pollInterval } from './api/client';
 import UploadCard from './components/UploadCard';
 import Results from './components/Results';
@@ -52,8 +52,14 @@ function Workspace() {
     const url=new URL(location.href);url.searchParams.delete('audit');history.replaceState(null,'',url);
   };
 
-  return <main className="page-shell minimal-shell">
-    <section id="workspace" className="workspace-section" aria-labelledby="workspace-title">
+  return <>
+    <header className="app-bar">
+      <a className="app-brand" href={job.data?'#results':'#workspace'} aria-label="Pay Code Auditor home"><ShieldCheck size={27}/><strong>Pay Code Auditor</strong></a>
+      <nav aria-label="Primary navigation"><a className="active" href={job.data?'#results':'#workspace'}>Workspace</a><span>Audit history</span></nav>
+      <div className="app-bar-actions"><div className="connection"><span className={`status-dot ${awards.isSuccess?'done':''}`}/><span>{awards.isPending?'Connecting':awards.error?'Service unavailable':'Connected'}<small>{awards.isSuccess?'Audit service ready':'Check the API service'}</small></span></div>{job.data?.status==='complete'&&<a download className="header-export" href={api.reportUrl(job.data.audit_id)}><ArrowDownToLine size={16}/>Export report</a>}</div>
+    </header>
+    <main className={`page-shell ${job.data?'audit-shell':'minimal-shell'}`}>
+    {!job.data&&<section id="workspace" className="workspace-section" aria-labelledby="workspace-title">
       <div className="section-heading">
         <div><div className="eyebrow">01 / YOUR WORKSPACE</div><h1 id="workspace-title">Let's look at the details.</h1></div>
         <div className="connection"><span className={`status-dot ${awards.isSuccess?'done':''}`}/>{awards.isPending?'Connecting to service':awards.error?'Service unavailable':'Audit service connected'}</div>
@@ -75,10 +81,11 @@ function Workspace() {
           {auditId&&<Button variant="subtle" fullWidth mt="xs" leftSection={<RotateCcw size={14}/>} onClick={()=>setResetOpen(true)}>Start a different review</Button>}
         </div>
       </div>
-    </section>
-    {job.data&&<Results job={job.data} businessLabel={businessLabel}/>}
+    </section>}
+    {job.data&&<Results job={job.data} businessLabel={businessLabel} onNewReview={()=>setResetOpen(true)}/>}
     <Modal opened={resetOpen} onClose={()=>setResetOpen(false)} title="Start a new review?" centered><p>This clears the current files and status from this screen.</p><div className="flex gap-3 mt-5"><Button variant="outline" onClick={()=>setResetOpen(false)}>Keep this review</Button><Button onClick={reset}>Start new review</Button></div></Modal>
-  </main>;
+    </main>
+  </>;
 }
 
 /** Mounts the initial workspace inside an application-level error boundary. */
