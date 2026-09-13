@@ -34,6 +34,17 @@ _resume_events: dict[str, threading.Event] = {}
 _pending_answers: dict[str, str] = {}
 _lock = threading.Lock()
 
+# Nothing ever removed an entry from _jobs — every audit anyone has ever run against a
+# long-lived process stays in memory forever, each holding full verdicts (citations,
+# investigation steps, reasoning text). A real production OOM restart traced back to
+# this. The architecture is locked to a single in-memory dict (spec: one uvicorn worker,
+# no Redis/SQLite), so the fix is a bounded cap rather than a different store: once full,
+# the oldest audit is evicted to make room for a new one. 50 is generous for any single
+# demo/review session; if that job happens to still be running, its background thread's
+# own get_job(audit_id) checks return None and it stops on its next step rather than
+# writing into a dict entry that no longer exists.
+MAX_STORED_JOBS = 50
+
 
 class JobError(Exception):
     """Raised for invalid job operations: unknown id, wrong state, stale question id."""
@@ -59,6 +70,15 @@ def create_job(award_id: str, mode: AuditMode) -> AuditJob:
     )
     with _lock:
         _jobs[audit_id] = job
+        if len(_jobs) > MAX_STORED_JOBS:
+            # _jobs is insertion-ordered and this is the only place a new key is added
+            # (_save only ever updates an existing one), so the first key is always the
+            # oldest — no need to compare created_at timestamps, which could tie under a
+            # tight creation loop.
+            oldest_id = next(iter(_jobs))
+            _jobs.pop(oldest_id, None)
+            _resume_events.pop(oldest_id, None)
+            _pending_answers.pop(oldest_id, None)
     return job
 
 
