@@ -214,6 +214,9 @@ blockquote a { display: inline-flex; align-items: center; gap: 5px; color: var(-
 .question-body h3 { margin: 5px 0 8px; font-size: 20px; }
 .question-body > p, .muted { color: var(--muted); font-size: 11px; line-height: 1.55; }
 .letter-text { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); font: 12px/1.65 Inter, "Segoe UI", sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+.letter-notes-heading { font-size: 12px; font-weight: 650; margin: 0 0 6px; }
+.letter-notes-heading:not(:first-child) { margin-top: 14px; }
+.letter-notes-steps { margin: 0 0 4px; padding-left: 18px; font-size: 12px; line-height: 1.6; color: var(--ink); }
 .loading-panel, .empty-results { padding: 40px; color: var(--muted); text-align: center; }
 .loading-panel h3, .empty-results h3 { margin: 10px 0 5px; color: var(--ink); font-size: 21px; }
 .loading-panel p, .empty-results p { font-size: 12px; }
