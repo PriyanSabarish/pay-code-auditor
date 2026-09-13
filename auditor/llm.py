@@ -39,10 +39,13 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()
 
 DEFAULT_FAST_MODEL = "openai/gpt-oss-20b"
 DEFAULT_STRONG_MODEL = "openai/gpt-oss-120b"
-# Verify these are still current in AI Studio before relying on them — Gemini's model
-# lineup moves fast and this default was picked without live access to confirm it.
-DEFAULT_GEMINI_FAST_MODEL = "gemini-2.5-flash"
-DEFAULT_GEMINI_STRONG_MODEL = "gemini-2.5-pro"
+# gemini-flash-latest had a free-tier quota of only 20 requests/day on the key this was
+# verified against (Pro-tier models had 0); gemini-3.1-flash-lite had 500/day instead, so
+# despite the name it's the default for both tiers. Verify current numbers yourself at
+# https://ai.dev/rate-limit before relying on this — Gemini's lineup and quotas both move
+# fast, and this was picked from one live check, not a stable published guarantee.
+DEFAULT_GEMINI_FAST_MODEL = "gemini-3.1-flash-lite"
+DEFAULT_GEMINI_STRONG_MODEL = "gemini-3.1-flash-lite"
 
 # The Groq SDK already retries a couple of times internally, but a real audit can sustain
 # enough back-to-back strong-tier calls (investigation + verifier, several steps each) to
