@@ -4,11 +4,18 @@ FAKE_DATA in particular must never leak in from a developer's local .env — api
 calls load_dotenv(), which by default won't override an already-set env var, so setting
 it here first keeps the suite deterministic and free regardless of whatever a developer
 has locally set for manual browser testing.
+
+Same reasoning for LLM_PROVIDER: test_llm.py's tests are Groq-specific (they monkeypatch
+the Groq client) and would silently route through the Gemini path instead — passing
+without testing anything — if a developer's local .env has LLM_PROVIDER=gemini set for
+manual testing. Pinning "groq" here keeps them deterministic; test_llm_gemini.py
+monkeypatches llm.LLM_PROVIDER directly so it's unaffected either way.
 """
 
 import os
 
 os.environ["FAKE_DATA"] = "1"
+os.environ["LLM_PROVIDER"] = "groq"
 
 import pytest
 
