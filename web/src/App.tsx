@@ -3,21 +3,24 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Alert, Button, Modal, Select, Transition } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowDownToLine, ArrowRight, CircleHelp, RotateCcw, ShieldCheck } from 'lucide-react';
-import { api, ApiError, fileError, pollInterval } from './api/client';
+import { ArrowDownToLine, ArrowRight, CircleHelp, FileSpreadsheet, RotateCcw, ShieldCheck } from 'lucide-react';
+import { api, ApiError, fetchAsFile, fileError, pollInterval } from './api/client';
+import type { SampleBusiness } from './api/client';
 import UploadCard from './components/UploadCard';
 import Results from './components/Results';
 import AuditLoading from './components/AuditLoading';
 import Home from './components/Home';
+import SampleData from './components/SampleData';
 import './experience.css';
 
-/** Crossfades page snapshots when supported, with a CSS entrance fallback. */
+/** Switches pages. Previously wrapped in document.startViewTransition() for a crossfade,
+ * but that callback was observed to be silently skipped entirely under real navigation —
+ * no callback invocation, no rejection either app code could act on, just a dead click:
+ * the hash changed, the page never followed. A cosmetic animation API isn't worth that
+ * risk, so this just applies the update directly; the workspace's own Transition
+ * components already provide a fade for the sections that need one. */
 function transitionPage(update:()=>void) {
-  const navigationDocument=document as Document & {startViewTransition?:(callback:()=>void)=>{finished:Promise<void>}};
-  if(navigationDocument.startViewTransition&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    const transition=navigationDocument.startViewTransition(()=>flushSync(update));
-    void transition.finished.catch(()=>{/* Navigation still completes if its animation is skipped. */});
-  }else{update();}
+  flushSync(update);
 }
 
 /** Expands the actual preview into a page-sized surface, then reveals the workspace. */
@@ -84,9 +87,14 @@ class ErrorBoundary extends Component<{children:ReactNode},{failed:boolean}> {
 
 /** Coordinates the initial upload workspace and its connection state. */
 function Workspace() {
-  const [page,setPage]=useState(()=>location.hash==='#home'?'home':location.hash==='#workspace'||new URLSearchParams(location.search).has('audit')?'workspace':'home');
+  const pageForHash=()=>{
+    if(location.hash==='#workspace'||location.hash==='#results'||new URLSearchParams(location.search).has('audit'))return 'workspace';
+    if(location.hash==='#samples')return 'samples';
+    return 'home';
+  };
+  const [page,setPage]=useState(pageForHash);
   useEffect(()=>{
-    const syncPage=()=>transitionPage(()=>setPage(location.hash==='#workspace'||location.hash==='#results'?'workspace':'home'));
+    const syncPage=()=>transitionPage(()=>setPage(pageForHash()));
     window.addEventListener('hashchange',syncPage);
     return ()=>window.removeEventListener('hashchange',syncPage);
   },[]);
@@ -107,6 +115,9 @@ function Workspace() {
   const [resetOpen,setResetOpen]=useState(false);
   const [uploadVersion,setUploadVersion]=useState(0);
   const awards=useQuery({queryKey:['awards'],queryFn:({signal})=>api.awards(signal),staleTime:60_000});
+  const samples=useQuery({queryKey:['samples'],queryFn:({signal})=>api.samples(signal),staleTime:60_000});
+  const [samplingId,setSamplingId]=useState<string|null>(null);
+  const [sampleError,setSampleError]=useState<string|null>(null);
   const job=useQuery({
     queryKey:['audit',auditId],
     queryFn:({signal})=>api.job(auditId!,signal),
@@ -139,6 +150,26 @@ function Workspace() {
     };
   },[reviewing]);
 
+  /** Loads a bundled sample business's CSVs as if the reviewer had picked them
+   * themselves, then jumps to the workspace ready to run. */
+  const useSample=async(business:SampleBusiness)=>{
+    setSamplingId(business.id);setSampleError(null);
+    try {
+      const [codesFile,runsFile]=await Promise.all([
+        fetchAsFile(api.samplePaycodesUrl(business.id),`${business.id}-paycodes.csv`),
+        fetchAsFile(api.samplePayrunsUrl(business.id),`${business.id}-payruns.csv`),
+      ]);
+      setPaycodes(codesFile);setPayruns(runsFile);setAwardId(business.award_id);
+      create.reset();setUploadVersion(value=>value+1);
+      const url=new URL(location.href);url.hash='workspace';history.pushState(null,'',url);
+      transitionPage(()=>setPage('workspace'));
+    } catch (error) {
+      setSampleError(error instanceof ApiError?error.message:'Could not load that sample. Check the API connection and try again.');
+    } finally {
+      setSamplingId(null);
+    }
+  };
+
   /** Clears the current files and returns the form to its initial state. */
   const reset=()=>{
     setAuditId(null);setPaycodes(null);setPayruns(null);setAwardId(null);
@@ -151,10 +182,13 @@ function Workspace() {
       <a className="app-brand" href="#home" aria-label="Pay Code Auditor home"><span className="brand-mark"><ShieldCheck size={36}/></span><strong>Pay Code Auditor</strong></a>
       <nav aria-label="Primary navigation">
         <a className={page==='home'?'active':''} aria-current={page==='home'?'page':undefined} href="#home">Home</a>
+        <a className={page==='workspace'?'active':''} aria-current={page==='workspace'?'page':undefined} href="#workspace">Workspace</a>
+        <a className={page==='samples'?'active':''} aria-current={page==='samples'?'page':undefined} href="#samples">Sample data</a>
       </nav>
       <div className="app-bar-actions"><div className="connection"><span className={`status-dot ${awards.isSuccess?'done':''}`}/><span>{awards.isPending?'Connecting':awards.error?'Service unavailable':'Connected'}<small>{awards.isSuccess?'Audit service ready':'Check the API service'}</small></span></div>{job.data?.status==='complete'&&<a download className="header-export" href={api.reportUrl(job.data.audit_id)}><ArrowDownToLine size={16}/>Export report</a>}</div>
     </header>
     {page==='home'&&<Home onStart={openWorkspace}/>}
+    {page==='samples'&&<SampleData onUseSample={useSample}/>}
     <main hidden={page!=='workspace'} className={`page-shell audit-stage ${job.data?'audit-shell':'minimal-shell'}`}>
     <Transition mounted={!job.data&&!create.isPending&&(!auditId||!!job.error)} transition="fade-up" duration={280} exitDuration={160}>
     {styles=><section style={styles} id="workspace" className="workspace-section stage-view" aria-labelledby="workspace-title">
@@ -167,6 +201,15 @@ function Workspace() {
           <ol className="stepper" aria-label="Review progress">{['Prepare','Investigate','Review'].map((name,index)=><li key={name} className={activeStep===index?'active':''} aria-current={activeStep===index?'step':undefined}><span>{index+1}</span>{name}</li>)}</ol>
           <div className="form-heading"><h2>Start a new review</h2><p>Choose the award context and add your two payroll exports.</p></div>
           {awards.error&&<Alert color="red" title="The audit service is unavailable" mb="md">{awards.error.message}<Button size="xs" mt="xs" variant="outline" onClick={()=>void awards.refetch()}>Retry connection</Button></Alert>}
+          {sampleError&&<Alert color="red" mb="md" title="Couldn't load that sample" withCloseButton onClose={()=>setSampleError(null)}>{sampleError}</Alert>}
+          {!!samples.data?.length&&<div className="sample-quickpick" aria-label="Or start from a sample business">
+            <span className="sample-quickpick-label"><FileSpreadsheet size={14}/>No files yet? Try a sample:</span>
+            <div className="sample-quickpick-chips">
+              {samples.data.map(business=><button key={business.id} type="button" className="sample-chip" disabled={busy||samplingId!==null} onClick={()=>void useSample(business)}>
+                {samplingId===business.id?'Loading…':business.name}
+              </button>)}
+            </div>
+          </div>}
           <form onSubmit={event=>{event.preventDefault();if(ready)create.mutate({paycodes:paycodes!,payruns:payruns!,award_id:awardId!});}}>
             <Select label="Award context" placeholder={awards.isPending?'Loading supported awards…':'Select an award'} data={(awards.data??[]).map(award=>({value:award.id,label:award.name}))} value={awardId} onChange={value=>{setAwardId(value);create.reset();}} disabled={busy||!awards.data?.length} error={fields.award_id} required allowDeselect={false}/>
             <UploadCard key={`codes-${uploadVersion}`} label="01 / Pay codes" description="Payment categories and current settings" file={paycodes} disabled={busy} error={codesError} onChange={file=>{setPaycodes(file);create.reset();}}/>

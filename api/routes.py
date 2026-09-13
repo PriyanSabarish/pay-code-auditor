@@ -23,6 +23,7 @@ from auditor.schemas import (
     AwardOption,
     CodeVerdict,
     LetterResponse,
+    SampleBusiness,
     VerdictRequest,
 )
 
@@ -32,12 +33,58 @@ from .config import FAKE_DATA
 router = APIRouter()
 
 FIXTURE_PATH = Path(__file__).resolve().parent.parent / "data" / "fixtures" / "audit_result_sample.json"
+SAMPLES_DIR = Path(__file__).resolve().parent.parent / "data" / "samples"
 
 AWARDS = [
     # Matches the award Data fetched and cited for the café sample business
     # (auditor/knowledge/sources.md, source S4). Update together if that ever changes.
     AwardOption(id="hospitality_ma000009", name="Hospitality Industry (General) Award MA000009"),
 ]
+
+# All three currently point at the same award: it's the only one in AWARDS above, since
+# only the café business has matching award clauses indexed (source S4). Retail and
+# construction still run — codes get classified against the ATO rules either way — they
+# just won't return an award-specific citation, only ATO ones.
+SAMPLE_BUSINESSES = [
+    SampleBusiness(
+        id="cafe", name="Café", award_id="hospitality_ma000009",
+        description="A small café's payroll, 40 pay codes including a few genuine setup errors to find.",
+        paycode_count=0,
+    ),
+    SampleBusiness(
+        id="retail", name="Retail store", award_id="hospitality_ma000009",
+        description="A retail store's payroll, 44 pay codes covering weekend and casual loading patterns.",
+        paycode_count=0,
+    ),
+    SampleBusiness(
+        id="construction", name="Construction site", award_id="hospitality_ma000009",
+        description="A construction crew's payroll, 40 pay codes including RDO and site allowance cases.",
+        paycode_count=0,
+    ),
+]
+
+
+@lru_cache(maxsize=1)
+def _sample_businesses_with_counts() -> list[SampleBusiness]:
+    """Fills in paycode_count from the actual fixture files rather than hand-maintaining
+    a number that drifts the next time Data edits a sample — counted once and cached
+    since these files don't change while the server is running."""
+
+    businesses = []
+    for business in SAMPLE_BUSINESSES:
+        path = SAMPLES_DIR / business.id / "paycodes.csv"
+        count = max(0, sum(1 for _ in path.open(encoding="utf-8")) - 1) if path.exists() else 0
+        businesses.append(business.model_copy(update={"paycode_count": count}))
+    return businesses
+
+
+def _sample_file_path(business_id: str, filename: str) -> Path:
+    if business_id not in {b.id for b in SAMPLE_BUSINESSES}:
+        raise HTTPException(status_code=404, detail=f"no sample business {business_id!r}")
+    path = SAMPLES_DIR / business_id / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"sample file {filename!r} not found for {business_id!r}")
+    return path
 
 
 @lru_cache(maxsize=1)
@@ -56,6 +103,23 @@ def _validation_error(field: str, message: str) -> JSONResponse:
 @router.get("/awards", response_model=list[AwardOption])
 async def list_awards() -> list[AwardOption]:
     return AWARDS
+
+
+@router.get("/samples", response_model=list[SampleBusiness])
+async def list_samples() -> list[SampleBusiness]:
+    return _sample_businesses_with_counts()
+
+
+@router.get("/samples/{business_id}/paycodes.csv")
+async def get_sample_paycodes(business_id: str) -> Response:
+    path = _sample_file_path(business_id, "paycodes.csv")
+    return Response(content=path.read_text(encoding="utf-8"), media_type="text/csv")
+
+
+@router.get("/samples/{business_id}/payruns.csv")
+async def get_sample_payruns(business_id: str) -> Response:
+    path = _sample_file_path(business_id, "payruns.csv")
+    return Response(content=path.read_text(encoding="utf-8"), media_type="text/csv")
 
 
 @router.post("/audits", status_code=202, response_model=AuditCreateResponse)

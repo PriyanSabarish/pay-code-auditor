@@ -74,6 +74,33 @@ def test_list_awards(client):
     assert "hospitality_ma000009" in ids
 
 
+def test_list_samples(client):
+    resp = client.get("/api/samples")
+    assert resp.status_code == 200
+    businesses = resp.json()
+    ids = {b["id"] for b in businesses}
+    assert ids == {"cafe", "retail", "construction"}
+    cafe = next(b for b in businesses if b["id"] == "cafe")
+    assert cafe["paycode_count"] > 0
+    assert cafe["award_id"] == "hospitality_ma000009"
+
+
+def test_sample_csv_files_are_downloadable(client):
+    resp = client.get("/api/samples/cafe/paycodes.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "code,name,description,counts_for_super,payroll_category" in resp.text
+
+    resp = client.get("/api/samples/cafe/payruns.csv")
+    assert resp.status_code == 200
+    assert "pay_date,code,total_amount" in resp.text
+
+
+def test_unknown_sample_business_is_404(client):
+    resp = client.get("/api/samples/does-not-exist/paycodes.csv")
+    assert resp.status_code == 404
+
+
 def test_create_audit_rejects_bad_paycodes(client):
     resp = _upload(client, paycodes="code,name\nA,B\n")
     assert resp.status_code == 422

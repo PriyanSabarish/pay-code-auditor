@@ -7,6 +7,7 @@ export type ClarifyingQuestion = components['schemas']['ClarifyingQuestion'];
 export type AwardOption = components['schemas']['AwardOption'];
 export type LetterResponse = components['schemas']['LetterResponse'];
 export type AnswerRequest = components['schemas']['AnswerRequest'];
+export type SampleBusiness = components['schemas']['SampleBusiness'];
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public fields: Record<string,string> = {}) { super(message); }
@@ -43,8 +44,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 const json = (body: unknown): RequestInit => ({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 const auditPath = (id: string) => `/api/audits/${encodeURIComponent(id)}`;
+const samplePath = (id: string) => `/api/samples/${encodeURIComponent(id)}`;
 export const api = {
   awards: (signal?: AbortSignal) => request<AwardOption[]>('/api/awards',{signal}),
+  samples: (signal?: AbortSignal) => request<SampleBusiness[]>('/api/samples',{signal}),
+  samplePaycodesUrl: (id: string) => `${samplePath(id)}/paycodes.csv`,
+  samplePayrunsUrl: (id: string) => `${samplePath(id)}/payruns.csv`,
   create: (files: {paycodes:File;payruns:File;award_id:string}) => {
     const form = new FormData();
     form.append('paycodes', files.paycodes); form.append('payruns', files.payruns);
@@ -58,6 +63,15 @@ export const api = {
   reportUrl: (id: string) => `${auditPath(id)}/report.csv`,
   letterUrl: (id:string,code:string) => `${auditPath(id)}/letter/${encodeURIComponent(code)}?download=true`,
 };
+
+/** Fetches a sample CSV and wraps it as a File, so it can flow through the exact same
+ * upload/validation/audit-creation path as a file the reviewer picked themselves. */
+export async function fetchAsFile(url: string, filename: string): Promise<File> {
+  const response = await fetch(url);
+  if (!response.ok) throw new ApiError(`Could not load the sample file (${response.status}).`, response.status);
+  const blob = await response.blob();
+  return new File([blob], filename, { type: 'text/csv' });
+}
 
 /** Validates a selected payroll file before it is uploaded. */
 export function fileError(file:File | null): string | undefined {

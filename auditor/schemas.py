@@ -207,6 +207,17 @@ class AwardOption(BaseModel):
     name: str
 
 
+class SampleBusiness(BaseModel):
+    """A bundled example paycodes.csv/payruns.csv pair a reviewer can load with one
+    click instead of sourcing their own files (spec: bundled sample data for demoing)."""
+
+    id: str
+    name: str
+    description: str
+    award_id: str
+    paycode_count: int
+
+
 class AuditCreateResponse(BaseModel):
     audit_id: str
 

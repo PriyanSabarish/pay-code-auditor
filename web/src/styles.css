@@ -205,6 +205,26 @@ blockquote a { display: inline-flex; align-items: center; gap: 5px; color: var(-
 .fine-print svg { flex: 0 0 auto; margin-top: 1px; }
 .workspace-panel form > .mantine-Button-root { margin-top: 20px; background: var(--teal); box-shadow: var(--shadow-button); }
 
+.sample-quickpick { margin-bottom: 18px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); }
+.sample-quickpick-label { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: var(--muted); font-size: 11px; font-weight: 550; }
+.sample-quickpick-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sample-chip { padding: 7px 13px; border: 1px solid #c5d0cd; border-radius: 999px; background: white; box-shadow: var(--shadow-sm); color: var(--ink); font-size: 12px; font-weight: 550; cursor: pointer; transition: border-color .18s ease, background-color .18s ease, transform .18s ease; }
+.sample-chip:hover:not(:disabled) { border-color: var(--teal); background: var(--teal-soft); transform: translateY(-1px); }
+.sample-chip:disabled { cursor: not-allowed; opacity: .6; }
+
+.sample-page { width: min(100%, clamp(920px, 78vw, 1280px)); max-width: none; margin: 0 auto; padding: clamp(24px,4vw,56px) clamp(24px,5vw,76px) 60px; }
+.sample-page-intro { max-width: 640px; margin: 0 0 28px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.sample-page-loading { color: var(--muted); font-size: 13px; }
+.sample-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.sample-card { display: flex; flex-direction: column; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.sample-card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--teal-dark); }
+.sample-card-heading h2 { font-size: 17px; color: var(--ink); }
+.sample-card p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.sample-card-count { margin-top: 12px; color: var(--teal-dark); font-size: 11px; font-weight: 600; }
+.sample-card-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.sample-download { display: inline-flex; align-items: center; gap: 6px; color: var(--teal-dark); font-size: 11.5px; font-weight: 550; text-decoration: none; }
+.sample-download:hover { text-decoration: underline; }
+
 .mantine-Button-root { border-radius: 7px; font-size: 12px; font-weight: 550; }
 .mantine-Modal-content, .mantine-Modal-header { background: var(--surface); }
 .mantine-Modal-content { border: 1px solid var(--line); box-shadow: 0 24px 80px rgb(23 37 54 / 18%); }
