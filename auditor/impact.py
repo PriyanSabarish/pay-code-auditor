@@ -59,7 +59,7 @@ def calculate_impact(
     verdict: Verdict,
     current_setting_counts: bool,
     average_amount_per_run: float,
-    pay_runs_per_year: int,
+    pay_runs_per_year: int | None,
 ) -> DollarImpact:
     """Computes the dollar impact of one pay code's configuration against
     its classified verdict. Returns a DollarImpact with either a shortfall
@@ -72,6 +72,14 @@ def calculate_impact(
     dollar figure. Passing "unclear" here raises, deliberately, rather than
     silently returning a zeroed result that could be mistaken for a clean
     code.
+
+    pay_runs_per_year of None means ingest.py could not determine the
+    code's pay cycle, per ADR-B07, usually because it only appeared in one
+    pay run in the uploaded history. This must also raise rather than
+    silently produce a wrong or zeroed dollar figure: guessing a cadence
+    here would misstate a real compliance number, and the correct handling
+    is routing the code to human review before impact is ever attempted,
+    the same principle as the unclear verdict guard above.
     """
     if verdict not in ("should_count", "should_not_count"):
         raise ValueError(
@@ -79,6 +87,15 @@ def calculate_impact(
             "'should_count' or 'should_not_count' may reach the impact "
             "engine, an 'unclear' classification must be routed to human "
             "review before impact is ever calculated."
+        )
+
+    if pay_runs_per_year is None:
+        raise ValueError(
+            f"calculate_impact received pay_runs_per_year=None for code "
+            f"'{code}'. This means ingest.py could not determine the "
+            "code's pay cycle (see the UNKNOWN_FREQUENCY or SINGLE_PAY_RUN "
+            "warning), and the code must be routed to human review rather "
+            "than have a dollar figure calculated against a guessed cadence."
         )
 
     annual_amount = calculate_annual_amount(average_amount_per_run, pay_runs_per_year)

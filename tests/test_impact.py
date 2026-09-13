@@ -138,6 +138,13 @@ class TestUnclearVerdictGuard:
                 code="RDOPAYOUT", verdict="unclear", current_setting_counts=False,
                 average_amount_per_run=500.00, pay_runs_per_year=26,
             )
+    
+    def test_none_pay_runs_per_year_raises_rather_than_crashing(self):
+        with pytest.raises(ValueError, match="pay_runs_per_year"):
+            calculate_impact(
+                code="ALCASHOUT", verdict="should_count", current_setting_counts=False,
+                average_amount_per_run=650.00, pay_runs_per_year=None,
+            )
 
     def test_garbage_verdict_also_raises(self):
         with pytest.raises(ValueError):
