@@ -1,9 +1,6 @@
 code,name,description,counts_for_super,payroll_category
 ORDHRS,Ordinary Hours,Base ordinary hours across all roles,Y,Wages
-CASLOAD,Casual Loading 25%,Casual loading on ordinary hours,Y,Loading
 FIRSTAID,First Aid Allow,First aid officer allowance,N,Allowance
-KNIFEALLOW,Knife Allow,Chef's own knife allowance,Y,Allowance
-ONCALLAH,On Call After Hours,On call allowance outside ordinary hours,N,Overtime
-RDOCASHOUT,RDO Cashout,"Cash out of a rostered day off, in service",Y,Leave
-RDOTERM,RDO Payout Term,Unused RDO paid on termination,N,Termination
-PILN,PILN,Payment in lieu of notice,Y,Termination
+OT15,Overtime 1.5x,Overtime paid at time and a half,Y,Overtime
+LOYALTYBON,Loyalty Bonus,Discretionary staff loyalty payment,N,Bonus
+LAUNDRYALLOW,Laundry Allow,Uniform laundering allowance,N,Allowance

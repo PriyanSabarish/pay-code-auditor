@@ -1,9 +1,6 @@
 code,name,description,counts_for_super,payroll_category
 ORDHRS,Ordinary Hours,Base ordinary hours across all trades,Y,Wages
-RDOACCRUAL,RDO Hours Worked,Ordinary hours worked that accrue an RDO,Y,Wages
 HEIGHTSALLOW,Heights Allow,Allowance for work at height above 3 metres,N,Allowance
-CONFINEDALLOW,Confined Space Allow,Allowance for work in a confined space,Y,Allowance
-TOOLALLOWFLAT,Tool Allow,"Tool allowance, fully expended on trade tools",N,Allowance
 LSLPORTABLE,LSL Portable Scheme,Long service leave paid through the industry portable scheme,Y,Leave
-LSLINHOUSE,Long Service Leave,"Long service leave, not a portable scheme",Y,Leave
-PILN,PILN,Payment in lieu of notice,Y,Termination
+PRODUCTIVITYBON,Productivity Bonus,"Site productivity bonus, ordinary hours",Y,Bonus
+TOOLALLOWFLAT,Tool Allow,"Tool allowance, fully expended on trade tools",N,Allowance
