@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Literal, Optional
@@ -327,6 +328,31 @@ def _complete_gemini(
     raise AssertionError("unreachable")  # pragma: no cover
 
 
+# Rolling call-count/token tally so a live audit's proximity to a provider's RPM/TPM
+# free-tier caps is visible in the terminal as it happens, not just as a 429 after the
+# fact — see the "20 requests/day" and "15 RPM" walls hit during live testing.
+_RPM_WINDOW_SECONDS = 60
+_recent_call_times: deque[float] = deque()
+_total_calls = 0
+_total_tokens = 0
+
+
+def _log_call_budget(result: CompletionResult) -> None:
+    global _total_calls, _total_tokens
+    now = time.time()
+    _recent_call_times.append(now)
+    while _recent_call_times and now - _recent_call_times[0] > _RPM_WINDOW_SECONDS:
+        _recent_call_times.popleft()
+    _total_calls += 1
+    _total_tokens += result.total_tokens or 0
+    print(
+        f"[llm] call #{_total_calls} ({result.tier} tier, {result.model}): "
+        f"{len(_recent_call_times)} calls in the last {_RPM_WINDOW_SECONDS}s, "
+        f"{_total_tokens} tokens total this run",
+        flush=True,
+    )
+
+
 def complete(
     messages: list[dict],
     *,
@@ -338,8 +364,11 @@ def complete(
     Dispatches to Groq or Gemini per LLM_PROVIDER — see the module docstring."""
 
     if LLM_PROVIDER == "gemini":
-        return _complete_gemini(messages, tier, temperature, **kwargs)
-    return _complete_groq(messages, tier, temperature, **kwargs)
+        result = _complete_gemini(messages, tier, temperature, **kwargs)
+    else:
+        result = _complete_groq(messages, tier, temperature, **kwargs)
+    _log_call_budget(result)
+    return result
 
 
 def _complete_groq(
