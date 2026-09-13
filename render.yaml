@@ -1,0 +1,17 @@
+# Render Blueprint — lets Render provision this service straight from the repo instead
+# of clicking through the dashboard by hand. Secrets (sync: false) are prompted for once
+# during setup and stored in Render, never committed here.
+services:
+  - type: web
+    name: pay-code-auditor
+    env: docker
+    plan: free
+    envVars:
+      - key: FAKE_DATA
+        value: "0"
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false

@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .config import DEV_CORS_ORIGINS
+from .config import CORS_ORIGINS
 from .routes import router
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
@@ -20,7 +20,7 @@ app = FastAPI(title="Pay Code Auditor API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=DEV_CORS_ORIGINS,
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

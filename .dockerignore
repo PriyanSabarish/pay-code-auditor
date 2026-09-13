@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.claude/
+web/node_modules/
+web/dist/
+web/coverage/
+var/
+.env
+data/samples/*_answer_key.csv
