@@ -58,7 +58,7 @@ SAMPLE_BUSINESSES = [
     ),
     SampleBusiness(
         id="construction", name="Construction site", award_id="hospitality_ma000009",
-        description="A construction crew's payroll covering adverse-conditions allowances, portable long service leave, and a couple of payment patterns worth double-checking.",
+        description="A construction crew's payroll covering adverse-conditions allowances and portable vs in-house long service leave.",
         paycode_count=0,
     ),
 ]

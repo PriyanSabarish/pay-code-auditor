@@ -1,6 +1,7 @@
 code,name,description,counts_for_super,payroll_category
 ORDHRS,Ordinary Hours,Base ordinary hours across all roles,Y,Wages
+TOOLALLOW,Stationery Allow,Allowance expected to be fully spent on work tools,N,Allowance
 ONCALLWEEKEND,Weekend On Call,Standby allowance for weekend roster coverage,N,Overtime
+COMMQ3,Commission Q3,Sales commission for the quarter,Y,Bonus
 COMMWEEKEND,Weekend Sales Bonus,Sales incentive earned entirely on weekend trading shifts,N,Bonus
 ALLOADOT,AL Loading (OT Linked),Leave loading clearly tied to lost overtime opportunity,Y,Loading
-TOOLALLOW,Stationery Allow,Allowance expected to be fully spent on work tools,N,Allowance
