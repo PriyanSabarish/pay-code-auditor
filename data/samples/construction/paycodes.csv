@@ -1,0 +1,41 @@
+code,name,description,counts_for_super,payroll_category
+ORDHRS,Ordinary Hours,Base ordinary hours across all trades,Y,Wages
+RDOACCRUAL,RDO Hours Worked,Ordinary hours worked that accrue an RDO,Y,Wages
+SATPEN,Saturday Penalty 150%,Saturday ordinary hours penalty,Y,Penalty
+SUNPEN,Sunday Penalty 200%,Sunday ordinary hours penalty,Y,Penalty
+WETWEATHER,Wet Weather Payment,Ordinary rate paid when stood down for wet weather,Y,Allowance
+HEIGHTSALLOW,Heights Allow,Allowance for work at height above 3 metres,N,Allowance
+CONFINEDALLOW,Confined Space Allow,Allowance for work in a confined space,Y,Allowance
+LEADHANDALLOW,Leading Hand Allow,Leading hand allowance for crew supervision,Y,Allowance
+FIRSTAID,First Aid Officer,First aid officer allowance,Y,Allowance
+TRAVELALLOW,Travel Allow,Fares and travel allowance to site,Y,Allowance
+TOOLALLOWFLAT,Tool Allow,"Tool allowance, fully expended on trade tools",N,Allowance
+PPEALLOW,PPE Allow,Reimbursement for required personal protective equipment,N,Allowance
+APPRENTICEALLOW,Apprentice Tool Allow,"Apprentice tool allowance, fully expended",N,Allowance
+OT15,Overtime 1.5x,Overtime paid at time and a half,Y,Overtime
+OT20,Overtime 2x,Overtime paid at double time,N,Overtime
+PRODUCTIVITYBON,Productivity Bonus,"Site productivity bonus, ordinary hours",Y,Bonus
+ONCALLAH,On Call After Hours,On call allowance outside ordinary hours,N,Overtime
+TOILCASHOUT,TOIL Cashout,Cash out of time off in lieu,N,Leave
+RDOCASHOUT,RDO Cashout,"Cash out of an accrued RDO, in service",Y,Leave
+ALCASHOUT,AL Cashout,"Cash out of annual leave, in service",Y,Leave
+ANNLV,Annual Leave,Paid annual leave taken,Y,Leave
+ALLOADING,AL Loading 17.5%,"Annual leave loading, general case",Y,Loading
+LSLINHOUSE,Long Service Leave,"Long service leave, not a portable scheme",Y,Leave
+LSLPORTABLE,LSL Portable Scheme,Long service leave paid through the industry portable scheme,Y,Leave
+SICKLV,Personal Leave,Paid personal and carers leave,Y,Leave
+FDVLEAVE,FDV Leave,Family and domestic violence leave,Y,Leave
+JURYDUTY,Jury Duty Leave,Jury duty leave,N,Leave
+WCOMPWORKED,WComp Light Duties,"Workers compensation, light duties worked",Y,Leave
+WCOMPNOTWORK,WComp Not Worked,"Workers compensation, not required to work",N,Leave
+SIGNONBONUS,Sign On Bonus,Sign on bonus for a new site hire,Y,Bonus
+REFERRALBONUS,Staff Referral Bonus,Bonus for referring a qualified tradesperson,Y,Bonus
+DIRFEE,Director Fee,Working director's fee,Y,Director
+STUDYLEAVE,Study Leave,Paid study leave for a trade certificate,Y,Leave
+SPECIALLEAVE,Special Paid Leave,Compassionate or special paid leave,Y,Leave
+PILN,PILN,Payment in lieu of notice,Y,Termination
+REDUNDANCY,Redundancy Pmt,Genuine redundancy payment,N,Termination
+ALTERM,AL Payout Term,Unused annual leave paid on termination,N,Termination
+LSLTERM,LSL Payout Term,Unused long service leave paid on termination,N,Termination
+RDOTERM,RDO Payout Term,Unused RDO paid on termination,N,Termination
+SUPERVISORALLOW,Site Supervisor Allow,Ongoing site supervision allowance,Y,Allowance
