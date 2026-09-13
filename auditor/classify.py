@@ -24,6 +24,7 @@ from .prompts import (
     CLASSIFICATION_USER_TEMPLATE,
     QE_RULES_SUMMARY,
 )
+from . import retrieval
 from .schemas import Classification, PayCode, PaymentHistory, SuperCountsStatus
 
 MAX_VALIDATION_ATTEMPTS = 2  # the original call, plus exactly one retry
@@ -63,6 +64,32 @@ def keyword_guess(pay_code: PayCode) -> Optional[SuperCountsStatus]:
         if pattern.search(text):
             return verdict
     return None
+
+
+def build_context(pay_code: PayCode, top_k: int = 3) -> Optional[str]:
+    """Retrieve ATO and award passages for one code (spec 6.2's "award-aware" step).
+
+    The caller decides whether to use this at all — passing context=None to
+    classify_code is what makes the "no_rag" eval baseline just a flag, not a fork.
+    """
+
+    query = f"{pay_code.code} {pay_code.name} {pay_code.description or ''}".strip()
+    kb = retrieval.get_knowledge_base()
+    chunks = kb.search(query, top_k=top_k, category="ato_guidance") + kb.search(
+        query, top_k=top_k, category="award"
+    )
+    if not chunks:
+        return None
+
+    lines = []
+    for chunk in chunks:
+        # Surface the ATO page's own qualifying-earnings verdict directly when the chunk
+        # carries one, so the model doesn't have to infer it from the passage's wording.
+        qe_note = ""
+        if chunk.qualifying_earnings is not None:
+            qe_note = f" [qualifying earnings: {'yes' if chunk.qualifying_earnings else 'no'}]"
+        lines.append(f"- [{chunk.source} — {chunk.reference}]{qe_note} {chunk.text}")
+    return "\n".join(lines)
 
 
 def _payment_pattern_summary(history: Optional[PaymentHistory]) -> str:
@@ -173,6 +200,17 @@ def classify_code(
         escalated=True,
         calls=calls + escalated_calls,
     )
+
+
+def classify_code_with_retrieval(
+    pay_code: PayCode,
+    history: Optional[PaymentHistory] = None,
+    top_k: int = 3,
+) -> ClassificationOutcome:
+    """The award-aware entry point (spec's "classifier" eval mode): retrieves context
+    first, then classifies with it. classify_code stays the "no_rag" baseline."""
+
+    return classify_code(pay_code, history, build_context(pay_code, top_k=top_k))
 
 
 def classify_codes(

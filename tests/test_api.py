@@ -33,7 +33,7 @@ def client():
     return TestClient(app)
 
 
-def _upload(client, paycodes=PAYCODES_CSV, payruns=PAYRUNS_CSV, award_id="general_retail_2020", mode="full"):
+def _upload(client, paycodes=PAYCODES_CSV, payruns=PAYRUNS_CSV, award_id="hospitality_ma000009", mode="full"):
     return client.post(
         "/api/audits",
         files={
@@ -71,7 +71,7 @@ def test_list_awards(client):
     resp = client.get("/api/awards")
     assert resp.status_code == 200
     ids = {a["id"] for a in resp.json()}
-    assert "general_retail_2020" in ids
+    assert "hospitality_ma000009" in ids
 
 
 def test_create_audit_rejects_bad_paycodes(client):

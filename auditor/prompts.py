@@ -63,7 +63,14 @@ above, or the given context's source when it applies),
   "reasoning": string, one or two sentences,
   "question_for_reviewer": string or null, a specific question ONLY if genuinely unclear
 }}
-Use "unclear" whenever the name and payment pattern do not clearly settle it — never guess."""
+Use "unclear" whenever the name and payment pattern do not clearly settle it — never guess. \
+If the retrieved context contains more than one entry with different qualifying-earnings \
+verdicts (for example, one rule says a payment counts and another says the same kind of \
+payment does not, depending on circumstance), that is a sign the code is genuinely unclear \
+unless the payment pattern tells you which circumstance applies — do not silently pick \
+whichever entry sounds closer to the code's name. In that case, cite both conflicting \
+entries and ask a question_for_reviewer that names the specific distinguishing fact you \
+are missing (for example, which of two circumstances the payment was made under)."""
 
 CLASSIFICATION_USER_TEMPLATE = """\
 Pay code: {code}
