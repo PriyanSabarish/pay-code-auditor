@@ -36,7 +36,8 @@ function Workspace() {
     const url=new URL(location.href);url.searchParams.set('audit',data.audit_id);history.replaceState(null,'',url);
   }});
   const busy=create.isPending||!!auditId;
-  const businessLabel=awards.data?.find(award=>award.id===awardId)?.name??'A closer look is underway.';
+  const activeAwardId=awardId??job.data?.award_id;
+  const businessLabel=awards.data?.find(award=>award.id===activeAwardId)?.name??'A closer look is underway.';
   const fields=create.error instanceof ApiError?create.error.fields:{};
   const codesError=fileError(paycodes)||fields.paycodes;
   const runsError=fileError(payruns)||fields.payruns;
