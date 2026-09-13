@@ -122,7 +122,9 @@ class KnowledgeChunk:
             source=self.source,
             reference=self.reference,
             url=self.url,
-            retrieved_date=self.retrieved_date,
+            # Citation.retrieved_date is a plain date; Data's real chunks carry a full
+            # ISO datetime (retrieved_utc), which pydantic rejects unless truncated first.
+            retrieved_date=self.retrieved_date[:10] if self.retrieved_date else None,
             text=self.text,
         )
 
