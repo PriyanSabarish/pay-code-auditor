@@ -1,9 +1,15 @@
-﻿.env
+.env
 .venv/
 __pycache__/
 *.pyc
-.streamlit/secrets.toml
+web/node_modules/
+web/dist/
 data/samples/*_answer_key.csv
 auditor/knowledge/raw/*.html
 .pytest_cache/
 .DS_Store
+.claude/
+web/.env.local
+web/coverage/
+web/*.tsbuildinfo
+var/
