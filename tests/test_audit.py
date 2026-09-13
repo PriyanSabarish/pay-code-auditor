@@ -139,6 +139,66 @@ def test_ask_bookkeeper_loop_resumes_until_complete(monkeypatch):
     assert verdict.status == "should_count"
 
 
+def test_remembered_answer_is_used_without_calling_ask_bookkeeper(monkeypatch):
+    """Spec 6.5: an already-answered code pattern for this bookkeeper skips asking
+    again entirely — the audit shouldn't even pause for a human this time."""
+
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    question = ClarifyingQuestion(id="q1", code="SITE ALLOW", question="Ordinary time?")
+    paused = InvestigationOutcome(
+        steps=[InvestigationStep(step_number=1, tool="ask_bookkeeper", input={"question": "Ordinary time?"}, output="Paused.")],
+        status="awaiting_input",
+        pending_question=question,
+    )
+    resumed = InvestigationOutcome(steps=paused.steps, status="complete", conclusion=_classification("yes", "high"))
+
+    calls = {"n": 0}
+    def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return paused
+        assert resume_answer == "Remembered: ordinary time."
+        return resumed
+    monkeypatch.setattr(audit, "investigate", fake_investigate)
+
+    audit.memory.get_memory().remember("default", "SITE ALLOW", "Ordinary time?", "Remembered: ordinary time.")
+
+    def fail_if_asked(q):
+        raise AssertionError("should not ask the bookkeeper when memory already has the answer")
+
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent", ask_bookkeeper=fail_if_asked)
+    assert calls["n"] == 2
+    assert verdict.classification.counts_towards_super == "yes"
+
+
+def test_a_new_answer_is_remembered_for_next_time(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    question = ClarifyingQuestion(id="q1", code="SITE ALLOW", question="Ordinary time?")
+    paused = InvestigationOutcome(steps=[], status="awaiting_input", pending_question=question)
+    resumed = InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high"))
+    calls = {"n": 0}
+    def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):
+        calls["n"] += 1
+        return paused if calls["n"] == 1 else resumed
+    monkeypatch.setattr(audit, "investigate", fake_investigate)
+
+    audit.audit_one_code(
+        make_paycode(counts_for_super="N"), PAYRUNS, mode="agent",
+        ask_bookkeeper=lambda q: "Yes, ordinary time.",
+    )
+
+    remembered = audit.memory.get_memory().recall("default", "SITE ALLOW")
+    assert remembered is not None
+    assert remembered.answer == "Yes, ordinary time."
+    assert remembered.question == "Ordinary time?"
+
+
 def test_ask_bookkeeper_none_stops_at_the_pause_rather_than_hanging(monkeypatch):
     monkeypatch.setattr(
         audit, "classify_code_with_retrieval",

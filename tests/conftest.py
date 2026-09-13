@@ -9,3 +9,21 @@ has locally set for manual browser testing.
 import os
 
 os.environ["FAKE_DATA"] = "1"
+
+import pytest
+
+from auditor import memory as _memory_module
+
+
+@pytest.fixture(autouse=True)
+def isolated_bookkeeper_memory(tmp_path, monkeypatch):
+    """Every test gets its own empty, throwaway memory store. Without this, tests share
+    the real process-global singleton (and its file persisted across runs at
+    var/bookkeeper_memory.json) — one test's remembered answer then silently changes
+    another test's behaviour, which is exactly how a mocked investigate() that always
+    returns the same "awaiting_input" outcome turned into a genuine infinite loop the
+    first time this was wired up."""
+
+    fresh = _memory_module.BookkeeperMemory(tmp_path / "test_bookkeeper_memory.json")
+    monkeypatch.setattr(_memory_module, "_default_memory", fresh)
+    yield fresh

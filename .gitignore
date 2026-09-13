@@ -10,3 +10,4 @@ data/samples/*_answer_key.csv
 web/.env.local
 web/coverage/
 web/*.tsbuildinfo
+var/
