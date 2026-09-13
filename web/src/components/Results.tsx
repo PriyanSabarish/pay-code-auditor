@@ -5,6 +5,7 @@ import { ArrowUpDown, BarChart3, Check, ChevronDown, CircleAlert, Coins, Copy, E
 import { api, money, safeSource, statusLabels } from '../api/client';
 import type { AuditResult, CodeVerdict, VerdictRequest } from '../api/client';
 import QuestionCard from './QuestionCard';
+import AuditLoading from './AuditLoading';
 
 type FindingFilter = 'all'|'unreviewed'|CodeVerdict['status'];
 const findingFilters: Array<{value:FindingFilter;label:string}> = [
@@ -69,6 +70,7 @@ export default function Results({job,businessLabel,onNewReview}:{job:AuditResult
     <div className="audit-heading"><div><div className="breadcrumb">Reviews <span>/</span> Findings</div><h1>Payroll review</h1><p>{businessLabel} <span>·</span> {job.award_id}</p></div><Button variant="outline" leftSection={<Plus size={16}/>} onClick={onNewReview}>New review</Button></div>
     {job.status==='failed'&&<Alert color="red" title="This audit could not finish">{job.error??'Please start a new review. Any partial findings below are incomplete.'}</Alert>}
     {job.pending_question&&<QuestionCard key={job.pending_question.id} question={job.pending_question} auditId={job.audit_id}/>}
+    {(job.status==='queued'||job.status==='running')&&!job.pending_question&&<AuditLoading compact={verdicts.length>0} processed={job.progress.processed_codes} total={job.progress.total_codes} step={job.progress.current_step}/>}
     {verdicts.length>0?<>
       <div className="metric-grid" aria-label="Audit summary">
         <article className="metric-card shortfall"><TriangleAlert/><div><span>Potential annual shortfall</span><strong>{money(shortfall)}</strong><small>Estimated</small></div></article>
@@ -100,7 +102,7 @@ export default function Results({job,businessLabel,onNewReview}:{job:AuditResult
           </>:<div className="evidence-empty"><ShieldCheck size={28}/><h2>Select a pay code</h2><p>Choose a finding to review its reasoning and supporting evidence.</p></div>}
         </aside>
       </div>
-    </>:<div className="loading-panel" role="status"><h3>Preparing the first findings…</h3><p>{job.progress.current_step??'Results will appear as each pay code is reviewed.'}</p><div className="wide-progress"><i style={{width:`${progress}%`}}/></div></div>}
+    </>:complete?<div className="loading-panel"><h3>No findings returned</h3><p>Start a new review to check another set of payroll files.</p></div>:null}
     <Modal opened={!!override} onClose={()=>{if(!decision.isPending)setOverride(null);}} title={`Override ${override?.code??''}`} centered><p className="muted">Your decision is recorded alongside the original recommendation.</p><Select label="Should this payment count towards super?" data={[{value:'yes',label:'Yes'},{value:'no',label:'No'},{value:'unclear',label:'Unclear — needs review'}]} value={treatment} onChange={value=>setTreatment(value??'unclear')} allowDeselect={false}/><Textarea mt="md" label="Reason for override" required value={note} onChange={event=>setNote(event.currentTarget.value)} maxLength={2000} minRows={3}/>{decision.error&&<Alert color="red" mt="sm">{decision.error.message}</Alert>}<Button mt="md" fullWidth loading={decision.isPending} disabled={!note.trim()} onClick={()=>{if(override)decision.mutate({code:override.code,body:{decision:'overridden',overridden_counts_towards_super:treatment as VerdictRequest['overridden_counts_towards_super'],note:note.trim()}});}}>Save reviewer decision</Button></Modal>
     <Modal opened={!!letterCode} onClose={()=>setLetterCode(null)} title="Draft client letter" size="lg" centered><div className="sample-banner">DRAFT FOR PROFESSIONAL REVIEW</div>{letter.isPending?<p>Preparing your draft…</p>:letter.error?<Alert color="red">{letter.error.message}<Button onClick={()=>void letter.refetch()} variant="subtle">Retry</Button></Alert>:letter.data&&<><pre className="letter-text">{letter.data.subject}{'\n\n'}{letter.data.body}</pre><div className="flex gap-3 flex-wrap"><Button variant="outline" leftSection={<Copy size={15}/>} onClick={async()=>{try{await navigator.clipboard.writeText(`${letter.data.subject}\n\n${letter.data.body}`);setCopyState('Copied');}catch{setCopyState('Select text to copy');}}}>{copyState}</Button><a download className="button-secondary" href={api.letterUrl(job.audit_id,letterCode!)}>Download draft</a></div></>}</Modal>
   </section>;
