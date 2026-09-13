@@ -68,3 +68,40 @@ def test_payment_history_for_unknown_code_raises():
     runs = load_payruns(io.StringIO(PAYRUNS_CSV))
     with pytest.raises(IngestError):
         payment_history_for_code("NOPE", runs)
+
+
+def test_malformed_currency_amount_raises_ingest_error_not_bare_valueerror():
+    csv = "pay_date,code,total_amount,employees_paid\n2026-07-10,A,$4,210.50,3\n"
+    with pytest.raises(IngestError):
+        load_payruns(io.StringIO(csv))
+
+
+def test_negative_amount_raises_ingest_error():
+    csv = "pay_date,code,total_amount,employees_paid\n2026-07-10,A,-50.00,3\n"
+    with pytest.raises(IngestError):
+        load_payruns(io.StringIO(csv))
+
+
+def test_invalid_counts_for_super_value_raises_ingest_error():
+    csv = "code,name,counts_for_super\nA,Test Code,Maybe\n"
+    with pytest.raises(IngestError):
+        load_paycodes(io.StringIO(csv))
+
+
+def test_orphan_code_raises_when_known_codes_supplied():
+    csv = "pay_date,code,total_amount,employees_paid\n2026-07-10,GHOST,100.00,3\n"
+    with pytest.raises(IngestError):
+        load_payruns(io.StringIO(csv), known_codes={"REALCODE"})
+
+
+def test_orphan_code_check_is_skipped_when_known_codes_not_supplied():
+    csv = "pay_date,code,total_amount,employees_paid\n2026-07-10,GHOST,100.00,3\n"
+    runs = load_payruns(io.StringIO(csv))  # no known_codes passed, preserves old behaviour
+    assert len(runs) == 1
+
+
+def test_frequency_fallback_now_warns_instead_of_staying_silent():
+    runs = load_payruns(io.StringIO(PAYRUNS_CSV))
+    single_run = runs[:1]
+    with pytest.warns(UserWarning, match="defaulting to"):
+        infer_pay_runs_per_year(single_run)
