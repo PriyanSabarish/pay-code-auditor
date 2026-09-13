@@ -229,3 +229,8 @@ class LetterResponse(BaseModel):
     subject: str
     body: str
     draft: bool = True
+    # Additive fields (spec 6.7): the bookkeeper's own action checklist and dollar
+    # summary, separate from the client-facing letter body above. Both are deterministic
+    # — see auditor/remediation.py — never LLM-generated.
+    fix_steps: list[str] = []
+    catch_up_summary: str = ""

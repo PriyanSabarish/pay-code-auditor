@@ -159,8 +159,15 @@ async def get_letter(audit_id: str, code: str, download: bool = Query(False)):
         raise HTTPException(status_code=404, detail=f"no verdict found for code {code!r}")
     letter = draft_letter(verdict)
     if download:
+        steps = "\n".join(f"{i}. {step}" for i, step in enumerate(letter.fix_steps, start=1))
+        content = (
+            f"{letter.subject}\n\n{letter.body}\n\n"
+            f"--- For the bookkeeper's own reference (not part of the client letter) ---\n\n"
+            f"Fix steps:\n{steps}\n\n"
+            f"Catch-up summary:\n{letter.catch_up_summary}"
+        )
         return Response(
-            content=f"{letter.subject}\n\n{letter.body}",
+            content=content,
             media_type="text/plain",
             headers={"Content-Disposition": f'attachment; filename="letter_{code}.txt"'},
         )

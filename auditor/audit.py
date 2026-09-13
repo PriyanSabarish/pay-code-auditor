@@ -1,20 +1,24 @@
 """Real audit orchestration — classify every code, investigate the suspicious ones,
-price the exact dollar impact. This is what api/jobs.py drives in the background once
-FAKE_DATA=0, and what the eval harness will call directly later, bypassing HTTP.
+verify non-obvious conclusions, price the exact dollar impact. This is what api/jobs.py
+drives in the background once FAKE_DATA=0, and what the eval harness will call directly
+later, bypassing HTTP.
 
 Deliberately returns list[CodeVerdict] rather than a full AuditResult: an audit_id,
 status and timestamps are job-store concerns (api/jobs.py), not something a pure
 function calling the LLM cascade should have to fabricate for itself.
 
-Known gap: verifier.py doesn't exist yet, so "full" mode currently behaves exactly like
-"agent" mode — every CodeVerdict.verifier_agreed stays None. Update this file's "full"
-branch when the verifier lands.
+The verifier only runs in "full" mode, and only on non-obvious verdicts (the same test
+that triggers investigation) — spec 6.4 is a check on a conclusion someone should
+double-check, not a second opinion on every trivially-correct code. Counting how many
+times CodeVerdict.verifier_agreed is False across a set of verdicts is the "errors
+caught by the verifier" eval metric (spec section 10); no separate counter needed here.
 """
 
 from __future__ import annotations
 
 from typing import Callable, Optional
 
+from . import memory
 from .agent.investigator import investigate
 from .classify import classify_code, classify_code_with_retrieval, keyword_guess
 from .impact import calculate_impact
@@ -30,6 +34,7 @@ from .schemas import (
     PaymentHistory,
     VerdictStatus,
 )
+from .verifier import verify
 
 AskBookkeeper = Callable[[ClarifyingQuestion], str]
 OnVerdict = Callable[[CodeVerdict], None]
@@ -93,17 +98,35 @@ def _resolve_pending_questions(
     payruns: list[PayRunRow],
     classification: Classification,
     ask_bookkeeper: Optional[AskBookkeeper],
+    bookkeeper_id: str,
 ):
-    """Run the investigator, answering any ask_bookkeeper pause synchronously via the
-    given callback, until it concludes or runs out of ways to get an answer."""
+    """Run the investigator, resolving any ask_bookkeeper pause either from memory (spec
+    6.5 — an already-answered code pattern for this bookkeeper skips asking again) or,
+    failing that, synchronously via the given callback — then remembers the answer for
+    next time."""
 
     outcome = investigate(pay_code, payruns, classification)
     while outcome.status == "awaiting_input":
-        if ask_bookkeeper is None:
-            break  # no one to ask (e.g. eval mode) — keep the trail so far, stay unclear
-        answer = ask_bookkeeper(outcome.pending_question)
+        question = outcome.pending_question
+        steps = outcome.steps
+        remembered = memory.get_memory().recall(bookkeeper_id, pay_code.code)
+        if remembered is not None:
+            answer = remembered.answer
+            # Make it visible in the trail that this was answered from memory, not a
+            # fresh human pause — otherwise the two are indistinguishable to anyone
+            # looking at the results, which makes this feature unverifiable by eye.
+            steps = steps[:-1] + [
+                steps[-1].model_copy(
+                    update={"output": f"Answered from memory (recorded {remembered.stored_at[:10]}): {answer}"}
+                )
+            ]
+        elif ask_bookkeeper is not None:
+            answer = ask_bookkeeper(question)
+            memory.get_memory().remember(bookkeeper_id, pay_code.code, question.question, answer)
+        else:
+            break  # no memory of this code and no one to ask — keep the trail, stay unclear
         outcome = investigate(
-            pay_code, payruns, classification, resume_steps=outcome.steps, resume_answer=answer
+            pay_code, payruns, classification, resume_steps=steps, resume_answer=answer
         )
     return outcome
 
@@ -113,26 +136,40 @@ def audit_one_code(
     payruns: list[PayRunRow],
     mode: AuditMode,
     ask_bookkeeper: Optional[AskBookkeeper] = None,
+    bookkeeper_id: str = memory.DEFAULT_BOOKKEEPER_ID,
 ) -> CodeVerdict:
-    """Classify, optionally investigate, and price one pay code."""
+    """Classify, optionally investigate, optionally verify, and price one pay code."""
+
+    print(f"[audit] {pay_code.code}: classifying ({mode} mode)...", flush=True)
+    investigation: list = []
 
     if mode == "keyword":
         classification = _keyword_only_classification(pay_code)
-        investigation = []
     else:
         history = _history_for(pay_code.code, payruns)
         outcome = classify_code(pay_code, history) if mode == "no_rag" else classify_code_with_retrieval(pay_code, history)
         classification = outcome.classification
-        investigation = []
 
         status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
         if mode in ("agent", "full") and _needs_investigation(classification, status):
-            investigation_outcome = _resolve_pending_questions(pay_code, payruns, classification, ask_bookkeeper)
+            print(f"[audit] {pay_code.code}: needs investigation (confidence={classification.confidence}, status={status})", flush=True)
+            investigation_outcome = _resolve_pending_questions(
+                pay_code, payruns, classification, ask_bookkeeper, bookkeeper_id
+            )
             investigation = investigation_outcome.steps
             if investigation_outcome.conclusion is not None:
                 classification = investigation_outcome.conclusion
 
     status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
+
+    verifier_agreed: Optional[bool] = None
+    if mode == "full" and _needs_investigation(classification, status):
+        print(f"[audit] {pay_code.code}: verifying conclusion...", flush=True)
+        verifier_outcome = verify(classification)
+        verifier_agreed = verifier_outcome.agrees
+        if verifier_agreed is False:
+            status = "needs_review"
+
     impact = _impact_for(pay_code, status, payruns)
 
     return CodeVerdict(
@@ -141,7 +178,7 @@ def audit_one_code(
         status=status,
         classification=classification,
         investigation=investigation,
-        verifier_agreed=None,  # verifier.py doesn't exist yet — see module docstring
+        verifier_agreed=verifier_agreed,
         impact=impact,
     )
 
@@ -154,16 +191,18 @@ def run_audit(
     on_verdict: Optional[OnVerdict] = None,
     on_progress: Optional[OnProgress] = None,
     ask_bookkeeper: Optional[AskBookkeeper] = None,
+    bookkeeper_id: str = memory.DEFAULT_BOOKKEEPER_ID,
 ) -> list[CodeVerdict]:
     """Audit every pay code, in order. award_id is accepted for interface symmetry with
     the API and future award-specific behaviour — retrieval already scopes to one
     knowledge base per the "one award at a time" limitation, so it isn't threaded
-    through further yet.
+    through further yet. bookkeeper_id defaults to a single-tenant stand-in until real
+    accounts exist — see memory.py.
     """
 
     verdicts: list[CodeVerdict] = []
     for i, pay_code in enumerate(paycodes):
-        verdict = audit_one_code(pay_code, payruns, mode, ask_bookkeeper)
+        verdict = audit_one_code(pay_code, payruns, mode, ask_bookkeeper, bookkeeper_id)
         verdicts.append(verdict)
         if on_verdict:
             on_verdict(verdict)

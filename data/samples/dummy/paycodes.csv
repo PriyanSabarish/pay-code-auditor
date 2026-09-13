@@ -1,0 +1,11 @@
+code,name,description,counts_for_super,payroll_category
+ORDHRS,Ordinary Hours,Base ordinary hours of work,Y,Wages
+CASLOAD,Casual Loading 25%,Casual loading on ordinary hours,Y,Loading
+SATPEN,Saturday Penalty 125%,Saturday ordinary hours penalty,Y,Penalty
+OT15,Overtime 1.5x,Overtime paid at time and a half,Y,Overtime
+FIRSTAID,First Aid Allow,First aid officer allowance,N,Allowance
+TOOLALL,Tool Allow,Tool allowance expected to be fully expended,N,Allowance
+ANNLV,Annual Leave,Paid annual leave taken,Y,Leave
+SICKLV,Personal Leave,Paid personal and carers leave,Y,Leave
+XMASBON,Christmas Bonus,Discretionary Christmas bonus,Y,Bonus
+REIMB,Expense Reimbursement,Reimbursement of receipted expenses,N,Reimbursement

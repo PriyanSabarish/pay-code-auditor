@@ -123,15 +123,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/": {
+    "/{full_path}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** No Frontend Built */
-        get: operations["no_frontend_built__get"];
+        /**
+         * Serve Spa
+         * @description Catch-all so a hard refresh on a client-side route (e.g. /results) still works.
+         */
+        get: operations["serve_spa__full_path__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -373,6 +376,16 @@ export interface components {
              * @default true
              */
             draft: boolean;
+            /**
+             * Fix Steps
+             * @default []
+             */
+            fix_steps: string[];
+            /**
+             * Catch Up Summary
+             * @default
+             */
+            catch_up_summary: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -628,11 +641,13 @@ export interface operations {
             };
         };
     };
-    no_frontend_built__get: {
+    serve_spa__full_path__get: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                full_path: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -644,6 +659,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

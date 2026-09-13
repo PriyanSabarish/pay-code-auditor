@@ -19,7 +19,7 @@ from functools import lru_cache
 from typing import Literal, Optional
 
 from dotenv import load_dotenv
-from groq import BadRequestError, Groq
+from groq import BadRequestError, Groq, RateLimitError
 
 load_dotenv()
 
@@ -27,6 +27,13 @@ ModelTier = Literal["fast", "strong"]
 
 DEFAULT_FAST_MODEL = "openai/gpt-oss-20b"
 DEFAULT_STRONG_MODEL = "openai/gpt-oss-120b"
+
+# The Groq SDK already retries a couple of times internally, but a real audit can sustain
+# enough back-to-back strong-tier calls (investigation + verifier, several steps each) to
+# burn through a low free-tier tokens-per-minute cap for longer than that covers — this
+# is the extra patience layer so a burst of investigated codes doesn't just crash the
+# audit outright. 8000 TPM on the on_demand tier is genuinely easy to hit in "full" mode.
+MAX_RATE_LIMIT_RETRIES = 5
 
 
 @dataclass
@@ -88,6 +95,24 @@ def get_client() -> Groq:
     return Groq(api_key=api_key)
 
 
+def _seconds_until_retry(exc: RateLimitError, default: float) -> float:
+    headers = getattr(exc.response, "headers", None) if getattr(exc, "response", None) else None
+    if headers is not None:
+        retry_ms = headers.get("retry-after-ms")
+        if retry_ms is not None:
+            try:
+                return max(float(retry_ms) / 1000, 0.0)
+            except ValueError:
+                pass
+        retry_seconds = headers.get("retry-after")
+        if retry_seconds is not None:
+            try:
+                return max(float(retry_seconds), 0.0)
+            except ValueError:
+                pass
+    return default
+
+
 def complete(
     messages: list[dict],
     *,
@@ -99,48 +124,67 @@ def complete(
 
     client = get_client()
     model = model_for_tier(tier)
-    start = time.perf_counter()
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            **kwargs,
-        )
-    except BadRequestError as exc:
-        # Some tool-calling turns make gpt-oss models emit a synthetic "json" tool call
-        # instead of plain text when they want to return structured output — Groq
-        # rejects that server-side as a hard 400 before we see a normal response at
-        # all. The JSON it tried to emit survives in the error body's
-        # failed_generation, so recover it as plain text rather than letting a model
-        # quirk crash the caller.
-        recovered = _recover_failed_generation(exc)
-        if recovered is None:
-            raise
-        latency = time.perf_counter() - start
-        return CompletionResult(
-            text=recovered, tier=tier, model=model, latency_seconds=latency,
-            prompt_tokens=None, completion_tokens=None, total_tokens=None,
-        )
-    latency = time.perf_counter() - start
-    usage = getattr(response, "usage", None)
-    message = response.choices[0].message
 
-    tool_calls = []
-    for raw_call in message.tool_calls or []:
+    for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
+        start = time.perf_counter()
         try:
-            arguments = json.loads(raw_call.function.arguments)
-        except json.JSONDecodeError:
-            arguments = {}
-        tool_calls.append(ToolCall(id=raw_call.id, name=raw_call.function.name, arguments=arguments))
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                **kwargs,
+            )
+        except BadRequestError as exc:
+            # Some tool-calling turns make gpt-oss models emit a synthetic "json" tool
+            # call instead of plain text when they want to return structured output —
+            # Groq rejects that server-side as a hard 400 before we see a normal
+            # response at all. The JSON it tried to emit survives in the error body's
+            # failed_generation, so recover it as plain text rather than letting a
+            # model quirk crash the caller.
+            recovered = _recover_failed_generation(exc)
+            if recovered is None:
+                raise
+            latency = time.perf_counter() - start
+            return CompletionResult(
+                text=recovered, tier=tier, model=model, latency_seconds=latency,
+                prompt_tokens=None, completion_tokens=None, total_tokens=None,
+            )
+        except RateLimitError as exc:
+            if attempt == MAX_RATE_LIMIT_RETRIES:
+                raise
+            # Add a small buffer on top of Groq's own suggested wait — retrying at
+            # exactly the boundary tends to just hit the limit again.
+            wait_seconds = _seconds_until_retry(exc, default=2.0 * (attempt + 1)) + 0.25
+            reason = getattr(exc, "message", None) or str(exc)
+            print(
+                f"[llm] rate limited on {tier} tier ({model}), retry {attempt + 1}/{MAX_RATE_LIMIT_RETRIES} "
+                f"in {wait_seconds:.1f}s — {reason}",
+                flush=True,
+            )
+            time.sleep(wait_seconds)
+            continue
 
-    return CompletionResult(
-        text=message.content or "",
-        tier=tier,
-        model=model,
-        latency_seconds=latency,
-        prompt_tokens=getattr(usage, "prompt_tokens", None) if usage else None,
-        completion_tokens=getattr(usage, "completion_tokens", None) if usage else None,
-        total_tokens=getattr(usage, "total_tokens", None) if usage else None,
-        tool_calls=tool_calls,
-    )
+        latency = time.perf_counter() - start
+        usage = getattr(response, "usage", None)
+        message = response.choices[0].message
+
+        tool_calls = []
+        for raw_call in message.tool_calls or []:
+            try:
+                arguments = json.loads(raw_call.function.arguments)
+            except json.JSONDecodeError:
+                arguments = {}
+            tool_calls.append(ToolCall(id=raw_call.id, name=raw_call.function.name, arguments=arguments))
+
+        return CompletionResult(
+            text=message.content or "",
+            tier=tier,
+            model=model,
+            latency_seconds=latency,
+            prompt_tokens=getattr(usage, "prompt_tokens", None) if usage else None,
+            completion_tokens=getattr(usage, "completion_tokens", None) if usage else None,
+            total_tokens=getattr(usage, "total_tokens", None) if usage else None,
+            tool_calls=tool_calls,
+        )
+
+    raise AssertionError("unreachable")  # pragma: no cover

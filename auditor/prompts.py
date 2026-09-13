@@ -64,13 +64,18 @@ above, or the given context's source when it applies),
   "question_for_reviewer": string or null, a specific question ONLY if genuinely unclear
 }}
 Use "unclear" whenever the name and payment pattern do not clearly settle it — never guess. \
-If the retrieved context contains more than one entry with different qualifying-earnings \
-verdicts (for example, one rule says a payment counts and another says the same kind of \
-payment does not, depending on circumstance), that is a sign the code is genuinely unclear \
-unless the payment pattern tells you which circumstance applies — do not silently pick \
-whichever entry sounds closer to the code's name. In that case, cite both conflicting \
-entries and ask a question_for_reviewer that names the specific distinguishing fact you \
-are missing (for example, which of two circumstances the payment was made under)."""
+The retrieved context will usually contain several entries about unrelated payment types \
+with different qualifying-earnings verdicts (that is normal and not a conflict) — only treat \
+it as a real conflict when two or more entries describe the SAME payment type as this code \
+(for example, two entries both about long service leave, one paid in-house and one under a \
+portable scheme) and disagree depending on a circumstance the code's name and payment pattern \
+don't specify. Ignore entries about a different payment type entirely, even if their verdict \
+disagrees with the one entry that actually matches this code. When only one entry genuinely \
+matches and the code's name gives no signal that a named exception applies, follow that \
+entry's verdict rather than defaulting to unclear — the exception must be indicated by the \
+code, not assumed. When there is a genuine same-payment-type conflict, cite both conflicting \
+entries and ask a question_for_reviewer that names the specific distinguishing fact you are \
+missing (for example, which of two circumstances the payment was made under)."""
 
 CLASSIFICATION_USER_TEMPLATE = """\
 Pay code: {code}
@@ -145,6 +150,15 @@ You are checking another payroll auditor's conclusion, not re-deriving it. You w
 given a pay code, its conclusion, the reasoning, and the rule it cites. Answer one \
 question only: does the cited rule actually support this conclusion?
 
+Some cited passages mention both "ordinary time earnings" (OTE) and "qualifying \
+earnings" (QE) — these are two separate verdicts on the ATO page, not one, and a \
+handful of payment types (for example some commissions) score differently on each. \
+Read past the word "ordinary" itself: find the specific clause that states the QE \
+verdict — the one this system's counts_towards_super is always about — and check the \
+conclusion against that clause specifically, not against whatever the passage says \
+about OTE. When a passage gives only one verdict, do not assume it is silently drawing \
+an OTE/QE distinction it never mentions — take it at face value.
+
 Respond with a single JSON object and nothing else:
 {{
   "agrees": true or false,
@@ -163,16 +177,21 @@ Does the cited rule support this conclusion?"""
 
 REMEDIATION_SYSTEM_PROMPT = """\
 You are drafting a short, plain-English letter from a bookkeeper to their client about one \
-pay code found during a Payday Super audit. Dollar figures are given to you already \
-calculated — never compute or restate them differently, just use the numbers you are given. \
-Write only the prose around them: what was found, why it matters, and that it is a draft \
-for professional review. Two to four short paragraphs. No legal or tax advice, no promises \
-about outcomes."""
+pay code found during a Payday Super audit. Write only the prose: what was found, why it \
+matters, and that it is a draft for professional review. Two to four short paragraphs. No \
+legal or tax advice, no promises about outcomes.
+
+You have NOT been given the actual dollar figures, and must never invent, estimate, or \
+compute one yourself — not even a rough figure. Wherever a dollar amount belongs in your \
+prose, write the exact placeholder token from the list below, character-for-character, \
+and nothing else in its place — no "$", no digits, no approximation alongside it. A \
+separate step substitutes the real figure afterward.
+
+Available placeholders for this letter: {available_placeholders}"""
 
 REMEDIATION_USER_TEMPLATE = """\
 Pay code: {code} ({name})
 Finding: {direction_description}
 Reasoning: {reasoning}
-Dollar impact (already calculated, use exactly as given): {impact_note}
 
-Draft the client letter body."""
+Draft the client letter body using only the placeholder tokens listed for any dollar amount."""
