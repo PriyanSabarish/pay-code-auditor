@@ -56,6 +56,17 @@ def _wait_for_status(client, audit_id, statuses, timeout=5.0):
     raise AssertionError(f"timed out waiting for status in {statuses}, last seen: {last}")
 
 
+def _wait_for_code(client, audit_id, code, timeout=5.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        state = client.get(f"/api/audits/{audit_id}").json()
+        verdict = next((item for item in state["verdicts"] if item["code"] == code), None)
+        if verdict is not None:
+            return verdict
+        time.sleep(FAKE_STEP_DELAY_SECONDS / 2)
+    raise AssertionError(f"timed out waiting for code {code!r}")
+
+
 def test_list_awards(client):
     resp = client.get("/api/awards")
     assert resp.status_code == 200
@@ -137,6 +148,26 @@ def test_verdict_and_report_and_letter_endpoints(client):
     letter_resp = client.get(f"/api/audits/{audit_id}/letter/SITE ALLOW")
     assert letter_resp.status_code == 200
     assert letter_resp.json()["code"] == "SITE ALLOW"
+
+    download_resp = client.get(f"/api/audits/{audit_id}/letter/SITE ALLOW?download=true")
+    assert download_resp.status_code == 200
+    assert download_resp.headers["content-type"].startswith("text/plain")
+    assert 'filename="letter_SITE ALLOW.txt"' in download_resp.headers["content-disposition"]
+    assert "DRAFT" in download_resp.text.upper()
+
+
+def test_reviewer_decisions_do_not_leak_between_audits(client):
+    first_id = _upload(client).json()["audit_id"]
+    _wait_for_code(client, first_id, "ORD HRS")
+    decision = client.post(
+        f"/api/audits/{first_id}/verdicts/ORD HRS",
+        json={"decision": "approved"},
+    )
+    assert decision.status_code == 200
+
+    second_id = _upload(client).json()["audit_id"]
+    second_verdict = _wait_for_code(client, second_id, "ORD HRS")
+    assert second_verdict["reviewer_decision"] is None
 
 
 def test_get_unknown_audit_is_404(client):

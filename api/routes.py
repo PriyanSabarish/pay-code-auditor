@@ -92,7 +92,11 @@ async def create_audit(
     job = jobs.create_job(award_id=award_id, mode=mode)
 
     if FAKE_DATA:
-        jobs.start_fake_audit(job, list(_fixture_verdicts()))
+        # Each audit must own its verdict objects. Reviewer decisions mutate verdicts,
+        # so reusing the cached fixture instances would leak one client's decisions
+        # into every audit created afterwards.
+        verdicts = [verdict.model_copy(deep=True) for verdict in _fixture_verdicts()]
+        jobs.start_fake_audit(job, verdicts)
     else:
         raise HTTPException(status_code=501, detail="The real audit pipeline is not wired up yet.")
 

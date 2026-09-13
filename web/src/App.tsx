@@ -19,7 +19,7 @@ function Workspace() {
   const [paycodes,setPaycodes]=useState<File|null>(null);
   const [payruns,setPayruns]=useState<File|null>(null);
   const [awardId,setAwardId]=useState<string|null>(null);
-  const [auditId,setAuditId]=useState<string|null>(null);
+  const [auditId,setAuditId]=useState<string|null>(()=>new URLSearchParams(location.search).get('audit'));
   const [resetOpen,setResetOpen]=useState(false);
   const [uploadVersion,setUploadVersion]=useState(0);
   const awards=useQuery({queryKey:['awards'],queryFn:({signal})=>api.awards(signal),staleTime:60_000});
@@ -31,9 +31,13 @@ function Workspace() {
     refetchIntervalInBackground:true,
     retry:(count,error)=>!(error instanceof ApiError&&error.status===404)&&count<2,
   });
-  const create=useMutation({mutationFn:api.create,onSuccess:data=>setAuditId(data.audit_id)});
+  const create=useMutation({mutationFn:api.create,onSuccess:data=>{
+    setAuditId(data.audit_id);
+    const url=new URL(location.href);url.searchParams.set('audit',data.audit_id);history.replaceState(null,'',url);
+  }});
   const busy=create.isPending||!!auditId;
-  const businessLabel=awards.data?.find(award=>award.id===awardId)?.name??'A closer look is underway.';
+  const activeAwardId=awardId??job.data?.award_id;
+  const businessLabel=awards.data?.find(award=>award.id===activeAwardId)?.name??'A closer look is underway.';
   const fields=create.error instanceof ApiError?create.error.fields:{};
   const codesError=fileError(paycodes)||fields.paycodes;
   const runsError=fileError(payruns)||fields.payruns;
@@ -45,6 +49,7 @@ function Workspace() {
   const reset=()=>{
     setAuditId(null);setPaycodes(null);setPayruns(null);setAwardId(null);
     create.reset();setUploadVersion(value=>value+1);setResetOpen(false);
+    const url=new URL(location.href);url.searchParams.delete('audit');history.replaceState(null,'',url);
   };
 
   return <main className="page-shell minimal-shell">

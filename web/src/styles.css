@@ -13,3 +13,5 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 
 .minimal-shell{padding-top:32px;padding-bottom:40px}.minimal-shell .workspace-section{padding-top:0}.minimal-shell .section-heading h1{font-size:38px;letter-spacing:-1px;line-height:1.2;margin-top:8px}.minimal-shell .workspace-grid{grid-template-columns:1fr;max-width:930px}
+
+.summary-button:disabled{cursor:default;opacity:.72}.summary-button:disabled:hover{background:transparent}
