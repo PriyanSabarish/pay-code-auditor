@@ -48,31 +48,38 @@ AWARDS = [
 SAMPLE_BUSINESSES = [
     SampleBusiness(
         id="cafe", name="Café", award_id="hospitality_ma000009",
-        description="A small café's payroll, 40 pay codes including a few genuine setup errors to find.",
+        description="A small café's payroll with a few pay codes deliberately set up incorrectly to find.",
         paycode_count=0,
     ),
     SampleBusiness(
         id="retail", name="Retail store", award_id="hospitality_ma000009",
-        description="A retail store's payroll, 44 pay codes covering weekend and casual loading patterns.",
+        description="A retail store's payroll covering weekend trading and commission-vs-bonus cases.",
         paycode_count=0,
     ),
     SampleBusiness(
         id="construction", name="Construction site", award_id="hospitality_ma000009",
-        description="A construction crew's payroll, 40 pay codes including RDO and site allowance cases.",
+        description="A construction crew's payroll covering RDO, site allowance, and portable LSL cases.",
         paycode_count=0,
     ),
 ]
 
+# The website serves a small "sanity check" subset (~8 codes) of each business's real
+# fixture rather than the full ~40-code file Data maintains — fast enough for a reviewer
+# to run end-to-end without waiting through (or exhausting a free-tier LLM quota on) a
+# full audit, while keeping a couple of genuinely interesting contrast cases (e.g.
+# HEIGHTSALLOW vs CONFINEDALLOW) rather than just the easy, obviously-correct codes.
+_SAMPLE_FILENAME_MAP = {"paycodes.csv": "sanity_paycodes.csv", "payruns.csv": "sanity_payruns.csv"}
+
 
 @lru_cache(maxsize=1)
 def _sample_businesses_with_counts() -> list[SampleBusiness]:
-    """Fills in paycode_count from the actual fixture files rather than hand-maintaining
-    a number that drifts the next time Data edits a sample — counted once and cached
-    since these files don't change while the server is running."""
+    """Fills in paycode_count from the actual served file rather than hand-maintaining a
+    number that drifts — counted once and cached since these files don't change while
+    the server is running."""
 
     businesses = []
     for business in SAMPLE_BUSINESSES:
-        path = SAMPLES_DIR / business.id / "paycodes.csv"
+        path = SAMPLES_DIR / business.id / _SAMPLE_FILENAME_MAP["paycodes.csv"]
         count = max(0, sum(1 for _ in path.open(encoding="utf-8")) - 1) if path.exists() else 0
         businesses.append(business.model_copy(update={"paycode_count": count}))
     return businesses
@@ -81,7 +88,8 @@ def _sample_businesses_with_counts() -> list[SampleBusiness]:
 def _sample_file_path(business_id: str, filename: str) -> Path:
     if business_id not in {b.id for b in SAMPLE_BUSINESSES}:
         raise HTTPException(status_code=404, detail=f"no sample business {business_id!r}")
-    path = SAMPLES_DIR / business_id / filename
+    on_disk_name = _SAMPLE_FILENAME_MAP.get(filename, filename)
+    path = SAMPLES_DIR / business_id / on_disk_name
     if not path.is_file():
         raise HTTPException(status_code=404, detail=f"sample file {filename!r} not found for {business_id!r}")
     return path

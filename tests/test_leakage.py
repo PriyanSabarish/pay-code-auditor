@@ -24,6 +24,12 @@ FIXTURE_PAYCODE_PATHS = [
     REPO_ROOT / "data" / "samples" / "cafe" / "paycodes.csv",
     REPO_ROOT / "data" / "samples" / "retail" / "paycodes.csv",
     REPO_ROOT / "data" / "samples" / "construction" / "paycodes.csv",
+    # The small subset the website actually serves for its bundled "sample data" feature
+    # (api/routes.py) — a separate file from the full fixture above, so it needs its own
+    # entry here rather than being covered by scanning the full one.
+    REPO_ROOT / "data" / "samples" / "cafe" / "sanity_paycodes.csv",
+    REPO_ROOT / "data" / "samples" / "retail" / "sanity_paycodes.csv",
+    REPO_ROOT / "data" / "samples" / "construction" / "sanity_paycodes.csv",
 ]
 
 # Not owned by Lane B, and may not exist yet on this branch. Scanned if
