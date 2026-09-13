@@ -1,0 +1,6 @@
+code,messy_name,expected_counts_towards_super,ato_citation,rationale,scenario
+ORDHRS,Ordinary Hours,yes,S1-T01-R01,"Straightforward correct case, base ordinary hours pay",correct
+ONCALLWEEKEND,Weekend On Call,yes,S1-T08-R02,"Configured N, should be Y, a task-type allowance misnamed as on-call is wrongly excluded",planted_underpayment
+COMMWEEKEND,Weekend Sales Bonus,yes,S1-T10-R02,"Configured N, should be Y, the commission-vs-bonus trap, and paid identically most runs",planted_error_and_pattern_anomaly
+ALLOADOT,AL Loading (OT Linked),no,S1-T02-R02,"Correctly excluded, leave loading clearly tied to lost overtime, the one exception among leave loading rules, easy to misclassify even though it's configured correctly",correct_hard_case
+TOOLALLOW,Stationery Allow,no,S1-T08-R03,Correctly excluded expense allowance expected to be fully spent,correct

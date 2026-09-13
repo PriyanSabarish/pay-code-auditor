@@ -1,0 +1,6 @@
+code,messy_name,expected_counts_towards_super,ato_citation,rationale,scenario
+ORDHRS,Ordinary Hours,yes,S1-T01-R01,"Straightforward correct case, base ordinary hours pay, configured Y, correctly counts",correct
+FIRSTAID,First Aid Allow,yes,S1-T08-R02,"Configured N, should be Y, a skill-type allowance is wrongly excluded",planted_underpayment
+OT15,Overtime 1.5x,no,S1-T09-R01,"Configured Y, should be N, overtime is wrongly included",planted_overpayment
+LOYALTYBON,Loyalty Bonus,yes,S1-T10-R05,"Configured N, should be Y, and paid the identical $180 every run, a disguised regular wage on top of the category miss",planted_error_and_pattern_anomaly
+LAUNDRYALLOW,Laundry Allow,no,S1-T08-R03,"Correctly excluded expense allowance, configured N, correctly does not count",correct
