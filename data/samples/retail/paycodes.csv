@@ -1,0 +1,45 @@
+code,name,description,counts_for_super,payroll_category
+ORDHRS,Ordinary Hours,Base ordinary hours across all roles,Y,Wages
+SUNPEN,Sunday Penalty 150%,Sunday ordinary hours penalty,Y,Penalty
+SATPEN,Saturday Penalty 125%,Saturday ordinary hours penalty,Y,Penalty
+PHPEN,Public Holiday Penalty 225%,Public holiday penalty for hours worked,Y,Penalty
+EVEPEN,Late Night Penalty,Penalty for trading hours after 6pm weekdays,Y,Penalty
+CASLOAD,Casual Loading 25%,Casual loading on ordinary hours,Y,Loading
+HDALLOW,HD Allow,"Higher duties allowance, acting store manager",Y,Allowance
+FIRSTAID,First Aid Officer,First aid officer allowance,Y,Allowance
+KEYALLOW,Key Holder Allow,Allowance for staff holding store keys,Y,Allowance
+UNIFORMALLOW,Uniform Allow,Flat uniform allowance regardless of expense,Y,Allowance
+LAUNDRYALLOW,Laundry Allow,Uniform laundering allowance,N,Allowance
+TOOLALLOW,Stationery Allow,Allowance expected to be fully spent on work tools,N,Allowance
+OT15,Overtime 1.5x,Overtime paid at time and a half,Y,Overtime
+OT20,Overtime 2x,Overtime paid at double time,N,Overtime
+ONCALLWEEKEND,Weekend On Call,Standby allowance for weekend roster coverage,N,Overtime
+TOILCASHOUT,TOIL Cashout,Cash out of time off in lieu,N,Leave
+RDOCASHOUT,RDO Cashout,"Cash out of a rostered day off, in service",Y,Leave
+ALCASHOUT,AL Cashout,"Cash out of annual leave, in service",Y,Leave
+ANNLV,Annual Leave,Paid annual leave taken,Y,Leave
+ALLOADING,AL Loading 17.5%,"Annual leave loading, general case",Y,Loading
+ALLOADOT,AL Loading (OT Linked),Leave loading clearly tied to lost overtime opportunity,Y,Loading
+LSLINHOUSE,Long Service Leave,"Long service leave, not a portable scheme",Y,Leave
+SICKLV,Personal Leave,Paid personal and carers leave,Y,Leave
+FDVLEAVE,FDV Leave,Family and domestic violence leave,Y,Leave
+PPLGOVT,PPL Govt Scheme,"Government paid parental leave, employer administered",N,Leave
+JURYDUTY,Jury Duty Leave,Jury duty leave,N,Leave
+COMMQ3,Commission Q3,Sales commission for the quarter,Y,Bonus
+COMMWEEKEND,Weekend Sales Bonus,Sales incentive earned entirely on weekend trading shifts,N,Bonus
+XMASBONUS,Christmas Bonus,Discretionary Christmas bonus for ordinary hours staff,Y,Bonus
+REFERRALBONUS,Staff Referral Bonus,Bonus for referring a new staff member,Y,Bonus
+STOCKTAKEBON,Stocktake Bonus,Bonus for ordinary hours worked during stocktake week,Y,Bonus
+WCOMPWORKED,WComp Light Duties,"Workers compensation, light duties worked",Y,Leave
+WCOMPNOTWORK,WComp Not Worked,"Workers compensation, not required to work",N,Leave
+DIRFEE,Director Fee,Working director's fee,Y,Director
+STUDYLEAVE,Study Leave,Paid study leave for a retail traineeship,Y,Leave
+SPECIALLEAVE,Special Paid Leave,Compassionate or special paid leave,Y,Leave
+PILN,PILN,Payment in lieu of notice,Y,Termination
+REDUNDANCY,Redundancy Pmt,Genuine redundancy payment,N,Termination
+ALTERM,AL Payout Term,Unused annual leave paid on termination,N,Termination
+LSLTERM,LSL Payout Term,Unused long service leave paid on termination,N,Termination
+RDOTERM,RDO Payout Term,Unused RDO paid on termination,N,Termination
+MEALALLOWOT,OT Meal Allow,Overtime meal allowance,N,Allowance
+SUPERVISORALLOW,Supervisor Allow,Ongoing supervisory task allowance,Y,Allowance
+ONCALLAH,On Call After Hours,On call allowance strictly outside ordinary trading hours,N,Overtime
