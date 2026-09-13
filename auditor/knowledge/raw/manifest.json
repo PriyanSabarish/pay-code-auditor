@@ -1,0 +1,32 @@
+[
+  {
+    "source_id": "S1",
+    "label": "ATO What payments are qualifying earnings",
+    "requested_url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+    "resolved_url": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/what-payments-are-qualifying-earnings",
+    "saved_as": "s1_ato_qualifying_earnings.html",
+    "byte_size": 726587,
+    "sha256": "080c33abaf07cc96de9c77e5f415e1431efe50df2abf611af265b0b0bea4a4c7",
+    "retrieved_utc": "2026-09-12T14:16:07+00:00"
+  },
+  {
+    "source_id": "S2",
+    "label": "ATO Law Companion Ruling LCR 2026/D1",
+    "requested_url": "https://www.ato.gov.au/law/view/document?DocID=COD/LCR2026D1/NAT/ATO/00001&PiT=99991231235958",
+    "resolved_url": "https://www.ato.gov.au/law/view/document?DocID=COD/LCR2026D1/NAT/ATO/00001&PiT=99991231235958",
+    "saved_as": "s2_lcr_2026_d1.html",
+    "byte_size": 321727,
+    "sha256": "12020c7293a2a9c2a8b7bd1a1554648c4c73b5aafdabc45d70bfedc745752770",
+    "retrieved_utc": "2026-09-12T14:16:08+00:00"
+  },
+  {
+    "source_id": "S4",
+    "label": "Hospitality Industry (General) Award MA000009",
+    "requested_url": "https://awards.fairwork.gov.au/MA000009.html",
+    "resolved_url": "https://awards.fairwork.gov.au/MA000009.html",
+    "saved_as": "s4_award_ma000009.html",
+    "byte_size": 2959617,
+    "sha256": "2e2451c40a5086b22a8b6f88c91663cba8f90f3f21f14d081ac555905db3340b",
+    "retrieved_utc": "2026-09-12T14:16:09+00:00"
+  }
+]
