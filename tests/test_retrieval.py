@@ -126,6 +126,16 @@ def test_load_chunks_handles_datas_real_ato_table_row_format():
     assert rdo_in_service.source == "ATO qualifying earnings page"
     assert "rostered days off" in rdo_in_service.text.lower()
 
+
+def test_real_chunk_to_citation_handles_full_iso_datetime():
+    # Data's real chunks carry retrieved_utc as a full ISO datetime (with a time
+    # component); Citation.retrieved_date is a plain date, which pydantic rejects
+    # unless truncated first. Regression test for that exact failure.
+    chunks = load_chunks(DEFAULT_CHUNKS_PATH)
+    citation = chunks[0].to_citation()
+    assert citation.retrieved_date is not None
+    assert str(citation.retrieved_date) == "2026-09-12"
+
     rdo_on_termination = next(c for c in chunks if c.id == "S1-T13-R04")
     assert rdo_on_termination.qualifying_earnings is False
 
