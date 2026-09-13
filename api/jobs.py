@@ -13,12 +13,16 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+from auditor.audit import run_audit
 from auditor.schemas import (
     AuditJob,
     AuditMode,
     AuditProgress,
     AuditStatus,
+    ClarifyingQuestion,
     CodeVerdict,
+    PayCode,
+    PayRunRow,
     ReviewerDecision,
     SuperCountsStatus,
 )
@@ -27,6 +31,7 @@ from .config import FAKE_STEP_DELAY_SECONDS
 
 _jobs: dict[str, AuditJob] = {}
 _resume_events: dict[str, threading.Event] = {}
+_pending_answers: dict[str, str] = {}
 _lock = threading.Lock()
 
 
@@ -94,6 +99,7 @@ def answer_question(job: AuditJob, question_id: str, answer: str) -> AuditJob:
     event = _resume_events.get(job.audit_id)
     if event is None:
         raise JobError(f"audit {job.audit_id} has no investigation to resume")
+    _pending_answers[job.audit_id] = answer
     event.set()
     return job
 
@@ -141,6 +147,91 @@ def _run_fake_audit(audit_id: str, verdicts: list[CodeVerdict]) -> None:
         job.progress.processed_codes += 1
         job.progress.current_step = f"Classified {verdict.code}"
         _save(job)
+
+    job = get_job(audit_id)
+    if job is not None:
+        job.status = AuditStatus.COMPLETE
+        job.progress.current_step = None
+        _save(job)
+    _resume_events.pop(audit_id, None)
+
+
+def start_real_audit(
+    job: AuditJob, paycodes: list[PayCode], payruns: list[PayRunRow], award_id: str, mode: AuditMode
+) -> None:
+    """Run the real classifier/investigator pipeline in the background. Pauses on a
+    genuine ask_bookkeeper call exactly like the fake simulation does, via the same
+    threading.Event mechanism — the only difference is the answer text actually flows
+    back into investigate(resume_answer=...) instead of being ignored."""
+
+    job.progress = AuditProgress(total_codes=len(paycodes), processed_codes=0)
+    job.status = AuditStatus.RUNNING
+    _save(job)
+
+    event = threading.Event()
+    _resume_events[job.audit_id] = event
+
+    thread = threading.Thread(
+        target=_run_real_audit, args=(job.audit_id, paycodes, payruns, award_id, mode), daemon=True
+    )
+    thread.start()
+
+
+def _make_ask_bookkeeper(audit_id: str):
+    def ask(question: ClarifyingQuestion) -> str:
+        job = get_job(audit_id)
+        if job is None:
+            return ""
+        job.pending_question = question
+        job.status = AuditStatus.AWAITING_INPUT
+        job.progress.current_step = f"Waiting on your answer for {question.code}"
+        _save(job)
+
+        event = _resume_events.get(audit_id)
+        if event is not None:
+            event.wait()
+            event.clear()
+        answer = _pending_answers.pop(audit_id, "")
+
+        job = get_job(audit_id)
+        if job is not None:
+            job.pending_question = None
+            job.status = AuditStatus.RUNNING
+            _save(job)
+        return answer
+
+    return ask
+
+
+def _run_real_audit(
+    audit_id: str, paycodes: list[PayCode], payruns: list[PayRunRow], award_id: str, mode: AuditMode
+) -> None:
+    def on_verdict(verdict: CodeVerdict) -> None:
+        job = get_job(audit_id)
+        if job is None:
+            return
+        job.verdicts.append(verdict)
+        job.progress.processed_codes += 1
+        job.progress.current_step = f"Classified {verdict.code}"
+        _save(job)
+
+    try:
+        run_audit(
+            paycodes,
+            payruns,
+            award_id,
+            mode=mode,
+            on_verdict=on_verdict,
+            ask_bookkeeper=_make_ask_bookkeeper(audit_id),
+        )
+    except Exception as exc:  # a code crashing the pipeline shouldn't hang the job forever
+        job = get_job(audit_id)
+        if job is not None:
+            job.status = AuditStatus.FAILED
+            job.error = str(exc)
+            _save(job)
+        _resume_events.pop(audit_id, None)
+        return
 
     job = get_job(audit_id)
     if job is not None:

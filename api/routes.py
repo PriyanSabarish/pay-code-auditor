@@ -98,7 +98,7 @@ async def create_audit(
         verdicts = [verdict.model_copy(deep=True) for verdict in _fixture_verdicts()]
         jobs.start_fake_audit(job, verdicts)
     else:
-        raise HTTPException(status_code=501, detail="The real audit pipeline is not wired up yet.")
+        jobs.start_real_audit(job, paycode_rows, payrun_rows, award_id, mode)
 
     return AuditCreateResponse(audit_id=job.audit_id)
 

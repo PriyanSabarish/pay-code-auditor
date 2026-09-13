@@ -1,0 +1,188 @@
+"""Tests for the real audit orchestrator. classify_code/classify_code_with_retrieval/
+investigate are mocked at the boundary — their own behaviour is already covered by
+test_classify.py and test_investigator.py; this file tests the orchestration logic:
+status determination, when investigation triggers, impact pricing, and the
+ask_bookkeeper pause/resume loop.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import pytest
+
+from auditor import audit
+from auditor.agent.investigator import InvestigationOutcome
+from auditor.classify import ClassificationOutcome
+from auditor.schemas import Classification, ClarifyingQuestion, InvestigationStep, PayCode, PayRunRow
+
+PAYRUNS = [
+    PayRunRow(pay_date="2026-07-03", code="SITE ALLOW", total_amount=1125.0, employees_paid=25),
+    PayRunRow(pay_date="2026-07-17", code="SITE ALLOW", total_amount=1125.0, employees_paid=25),
+]
+
+
+def _classification(counts="yes", confidence="high") -> Classification:
+    return Classification(
+        code="SITE ALLOW", normalised_name="Site Allowance", ato_category="allowance",
+        counts_towards_super=counts, confidence=confidence, citations=[], reasoning="stub",
+    )
+
+
+def make_paycode(code="SITE ALLOW", name="Site Allowance", counts_for_super="N") -> PayCode:
+    return PayCode(code=code, name=name, counts_for_super=counts_for_super)
+
+
+def test_correct_status_when_setting_matches_classification(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="no", confidence="high"), escalated=False),
+    )
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="classifier")
+    assert verdict.status == "correct"
+    assert verdict.impact is None
+
+
+def test_should_count_status_when_excluded_but_should_count(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="yes", confidence="high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("yes", "high")))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent")
+    assert verdict.status == "should_count"
+    assert verdict.impact is not None
+    assert verdict.impact.direction == "should_count_not_counted"
+
+
+def test_counts_but_shouldnt_status_and_impact(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="no", confidence="high"), escalated=False),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="complete", conclusion=_classification("no", "high")))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="Y"), PAYRUNS, mode="agent")
+    assert verdict.status == "counts_but_shouldnt"
+    assert verdict.impact.direction == "counts_should_not"
+
+
+def test_unclear_classification_is_needs_review(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=[], status="step_limit_reached", conclusion=_classification("unclear", "low")))
+    verdict = audit.audit_one_code(make_paycode(), PAYRUNS, mode="agent")
+    assert verdict.status == "needs_review"
+    assert verdict.impact is None
+
+
+def test_investigation_not_triggered_for_confident_correct_classification(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="no", confidence="high"), escalated=False),
+    )
+    def fail_if_called(*a, **k):
+        raise AssertionError("investigate() should not run for a confident, correct classification")
+    monkeypatch.setattr(audit, "investigate", fail_if_called)
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="full")
+    assert verdict.status == "correct"
+    assert verdict.investigation == []
+
+
+def test_investigation_updates_the_final_classification(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    revised = _classification(counts="yes", confidence="high")
+    steps = [InvestigationStep(step_number=1, tool="get_payment_history", input={}, output="stub")]
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: InvestigationOutcome(steps=steps, status="complete", conclusion=revised))
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent")
+    assert verdict.classification.counts_towards_super == "yes"
+    assert verdict.status == "should_count"
+    assert verdict.investigation == steps
+
+
+def test_ask_bookkeeper_loop_resumes_until_complete(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    question = ClarifyingQuestion(id="q1", code="SITE ALLOW", question="Ordinary time?")
+    paused = InvestigationOutcome(
+        steps=[InvestigationStep(step_number=1, tool="ask_bookkeeper", input={"question": "Ordinary time?"}, output="Paused.")],
+        status="awaiting_input",
+        pending_question=question,
+    )
+    resumed = InvestigationOutcome(steps=paused.steps, status="complete", conclusion=_classification("yes", "high"))
+
+    calls = {"n": 0}
+    def fake_investigate(pay_code, payruns, classification, resume_steps=None, resume_answer=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            assert resume_steps is None
+            return paused
+        assert resume_answer == "Yes, ordinary time."
+        return resumed
+    monkeypatch.setattr(audit, "investigate", fake_investigate)
+
+    received_questions = []
+    def ask_bookkeeper(q):
+        received_questions.append(q)
+        return "Yes, ordinary time."
+
+    verdict = audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="agent", ask_bookkeeper=ask_bookkeeper)
+    assert calls["n"] == 2
+    assert received_questions == [question]
+    assert verdict.classification.counts_towards_super == "yes"
+    assert verdict.status == "should_count"
+
+
+def test_ask_bookkeeper_none_stops_at_the_pause_rather_than_hanging(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification(counts="unclear", confidence="low"), escalated=True),
+    )
+    paused = InvestigationOutcome(steps=[], status="awaiting_input", pending_question=ClarifyingQuestion(id="q1", code="SITE ALLOW", question="?"))
+    monkeypatch.setattr(audit, "investigate", lambda *a, **k: paused)
+    verdict = audit.audit_one_code(make_paycode(), PAYRUNS, mode="agent", ask_bookkeeper=None)
+    assert verdict.status == "needs_review"  # falls back to the pre-investigation classification
+
+
+def test_keyword_mode_uses_no_llm_at_all(monkeypatch):
+    def fail_if_called(*a, **k):
+        raise AssertionError("keyword mode must not call the LLM classifier")
+    monkeypatch.setattr(audit, "classify_code", fail_if_called)
+    monkeypatch.setattr(audit, "classify_code_with_retrieval", fail_if_called)
+    verdict = audit.audit_one_code(make_paycode("OT 1.5", "Overtime 1.5x", counts_for_super="N"), PAYRUNS, mode="keyword")
+    assert verdict.classification.counts_towards_super == "no"
+    assert verdict.status == "correct"
+
+
+def test_no_rag_mode_calls_classify_code_not_the_retrieval_variant(monkeypatch):
+    calls = {"no_rag": 0, "rag": 0}
+    monkeypatch.setattr(audit, "classify_code", lambda pc, h: calls.__setitem__("no_rag", calls["no_rag"] + 1) or ClassificationOutcome(classification=_classification("no", "high"), escalated=False))
+    def fail_if_called(*a, **k):
+        raise AssertionError("no_rag mode must not use retrieval")
+    monkeypatch.setattr(audit, "classify_code_with_retrieval", fail_if_called)
+    audit.audit_one_code(make_paycode(counts_for_super="N"), PAYRUNS, mode="no_rag")
+    assert calls["no_rag"] == 1
+
+
+def test_run_audit_calls_progress_and_verdict_callbacks_in_order(monkeypatch):
+    monkeypatch.setattr(
+        audit, "classify_code_with_retrieval",
+        lambda pc, h: ClassificationOutcome(classification=_classification("no", "high"), escalated=False),
+    )
+    codes = [make_paycode("A", "A", "N"), make_paycode("B", "B", "N")]
+    seen_verdicts = []
+    seen_progress = []
+    verdicts = audit.run_audit(
+        codes, [], "hospitality_ma000009", mode="classifier",
+        on_verdict=seen_verdicts.append,
+        on_progress=lambda i, n, code: seen_progress.append((i, n, code)),
+    )
+    assert [v.code for v in verdicts] == ["A", "B"]
+    assert [v.code for v in seen_verdicts] == ["A", "B"]
+    assert seen_progress == [(1, 2, "A"), (2, 2, "B")]
