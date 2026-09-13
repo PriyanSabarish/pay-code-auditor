@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+from . import memory
 from .agent.investigator import investigate
 from .classify import classify_code, classify_code_with_retrieval, keyword_guess
 from .impact import calculate_impact
@@ -97,15 +98,24 @@ def _resolve_pending_questions(
     payruns: list[PayRunRow],
     classification: Classification,
     ask_bookkeeper: Optional[AskBookkeeper],
+    bookkeeper_id: str,
 ):
-    """Run the investigator, answering any ask_bookkeeper pause synchronously via the
-    given callback, until it concludes or runs out of ways to get an answer."""
+    """Run the investigator, resolving any ask_bookkeeper pause either from memory (spec
+    6.5 — an already-answered code pattern for this bookkeeper skips asking again) or,
+    failing that, synchronously via the given callback — then remembers the answer for
+    next time."""
 
     outcome = investigate(pay_code, payruns, classification)
     while outcome.status == "awaiting_input":
-        if ask_bookkeeper is None:
-            break  # no one to ask (e.g. eval mode) — keep the trail so far, stay unclear
-        answer = ask_bookkeeper(outcome.pending_question)
+        question = outcome.pending_question
+        remembered = memory.get_memory().recall(bookkeeper_id, pay_code.code)
+        if remembered is not None:
+            answer = remembered.answer
+        elif ask_bookkeeper is not None:
+            answer = ask_bookkeeper(question)
+            memory.get_memory().remember(bookkeeper_id, pay_code.code, question.question, answer)
+        else:
+            break  # no memory of this code and no one to ask — keep the trail, stay unclear
         outcome = investigate(
             pay_code, payruns, classification, resume_steps=outcome.steps, resume_answer=answer
         )
@@ -117,6 +127,7 @@ def audit_one_code(
     payruns: list[PayRunRow],
     mode: AuditMode,
     ask_bookkeeper: Optional[AskBookkeeper] = None,
+    bookkeeper_id: str = memory.DEFAULT_BOOKKEEPER_ID,
 ) -> CodeVerdict:
     """Classify, optionally investigate, optionally verify, and price one pay code."""
 
@@ -131,7 +142,9 @@ def audit_one_code(
 
         status = _status_for(pay_code.counts_for_super, classification.counts_towards_super)
         if mode in ("agent", "full") and _needs_investigation(classification, status):
-            investigation_outcome = _resolve_pending_questions(pay_code, payruns, classification, ask_bookkeeper)
+            investigation_outcome = _resolve_pending_questions(
+                pay_code, payruns, classification, ask_bookkeeper, bookkeeper_id
+            )
             investigation = investigation_outcome.steps
             if investigation_outcome.conclusion is not None:
                 classification = investigation_outcome.conclusion
@@ -166,16 +179,18 @@ def run_audit(
     on_verdict: Optional[OnVerdict] = None,
     on_progress: Optional[OnProgress] = None,
     ask_bookkeeper: Optional[AskBookkeeper] = None,
+    bookkeeper_id: str = memory.DEFAULT_BOOKKEEPER_ID,
 ) -> list[CodeVerdict]:
     """Audit every pay code, in order. award_id is accepted for interface symmetry with
     the API and future award-specific behaviour — retrieval already scopes to one
     knowledge base per the "one award at a time" limitation, so it isn't threaded
-    through further yet.
+    through further yet. bookkeeper_id defaults to a single-tenant stand-in until real
+    accounts exist — see memory.py.
     """
 
     verdicts: list[CodeVerdict] = []
     for i, pay_code in enumerate(paycodes):
-        verdict = audit_one_code(pay_code, payruns, mode, ask_bookkeeper)
+        verdict = audit_one_code(pay_code, payruns, mode, ask_bookkeeper, bookkeeper_id)
         verdicts.append(verdict)
         if on_verdict:
             on_verdict(verdict)
