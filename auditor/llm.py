@@ -266,15 +266,14 @@ def _complete_gemini(
         config_kwargs["tool_config"] = genai_types.ToolConfig(
             function_calling_config=genai_types.FunctionCallingConfig(mode=mode)
         )
-        # "Thinking" models attach a thought_signature to each function-call part and
-        # require it echoed back verbatim in later turns, or generateContent hard-rejects
-        # the request (400 INVALID_ARGUMENT). investigator.py's resumable step loop
-        # persists steps as the frozen InvestigationStep schema (no room for an opaque
-        # provider signature) and can pause for a real human answer between turns, so
-        # there's no reliable way to carry a signature across that boundary — disabling
-        # thinking for tool-calling turns sidesteps the requirement entirely rather than
-        # fighting an architecture mismatch that only Gemini's "thinking" models create.
-        config_kwargs["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=0)
+        # No thinking_config here on purpose: an earlier attempt set thinking_budget=0
+        # to sidestep Gemini's thought_signature requirement on replayed tool calls, but
+        # that never actually worked (the signature is still required regardless of
+        # thinking budget — see _to_gemini_contents for the real fix, which captures and
+        # forwards the genuine signature instead). thinking_config turned out to be dead
+        # weight that gemini-3.5-flash-lite hard-rejects outright (400 INVALID_ARGUMENT)
+        # while gemini-3.1-flash-lite merely tolerated it — removed rather than adding
+        # per-model special-casing for a parameter that wasn't doing anything anyway.
     config = genai_types.GenerateContentConfig(**config_kwargs)
 
     for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
