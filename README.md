@@ -1,6 +1,14 @@
+
 # Pay Code Auditor
 
+<<<<<<< HEAD
+Payday Super started 1 July 2026. Super is now paid every payday, on a new measure —
+qualifying earnings. Every pay code has to be mapped by hand, and payroll software
+calculates from whatever settings you entered without checking whether they're right. One
+wrong code repeats in every pay run, for every employee, at up to a 60% penalty uplift.
+=======
 An AI agent that checks a business's payroll pay codes against Australia's Payday Super qualifying earnings rules, the way a senior payroll auditor would. It reads the pay codes, checks them against the ATO guidance and the business's award, looks at how each code is actually paid, works out the exact dollar impact of any error in plain Python, and drafts the fix and a client letter. A person approves every change before anything is final.
+>>>>>>> 10568b28b2b0f942f05e18bea21e13f6cbb044de
 
 Primary customer: bookkeepers and BAS agents who run payroll for many small business clients at once.
 
@@ -23,6 +31,44 @@ Since 1 July 2026, employers must pay super every payday instead of every quarte
 
 The model is used for the one thing it is genuinely good at here, interpreting messy, inconsistent pay code names and matching them to a legal category. Every dollar figure, every comparison against a client's current setting, and every penalty calculation is deterministic Python. This is not a style choice. A compliance number has to be exact and repeatable, and a model is the wrong tool for that job even when it is right most of the time.
 
+## What it does
+
+Upload a client's pay codes and pay run summary, pick their award, and every code comes
+back correct, underpaid, overpaid, or needs review — with the reasoning trail, the ATO
+passage or award clause behind it, and the exact dollar impact. The bookkeeper approves
+each flag, then downloads the report, fix steps and a draft client letter.
+
+## How we built it
+
+Python core, FastAPI, React. A two-model cascade classifies every code, grounded in hybrid
+retrieval (BM25 + local embeddings) over the ATO guidance, SGR 2009/2 and the client's
+award. Suspicious codes go to an agent with five read-only tools, capped at six logged
+steps. A second model verifies each conclusion. All money is plain Python, unit tested —
+the model never does arithmetic. The LLM layer is provider-agnostic (`LLM_PROVIDER=groq`
+or `gemini`), so the whole cascade can run on either without touching call sites.
+
+## Challenges we ran into
+
+Real code names are messy and often ambiguous, which pushed us to investigate how each
+code is actually paid rather than what it's called. Tuning when to say "unclear" instead of
+guessing took real work.
+
+## Accomplishments that we're proud of
+
+**92.0%** (46/50) on 50 held-out test codes, against **36.0%** (18/50) for a keyword
+baseline. The verifier caught [N] wrong conclusions. [N] of 12 planted problems found.
+[$X] and [N] minutes per audit, measured.
+
+## What we learned
+
+Retrieval beat model size. Letting the system decline to answer made it better, not worse.
+Separating judgement from arithmetic removed a whole class of doubt.
+
+## What's next for Pay Code Auditor
+
+The ongoing per-pay-run check — that's the subscription. Then any payroll export format,
+multiple awards per audit, and the edge cases we excluded.
+
 ## Architecture
 
 One deployed service. FastAPI serves the API under /api and the built React bundle as static files at the root, so there is no CORS to manage in production and nothing to deploy twice.
@@ -30,6 +76,22 @@ One deployed service. FastAPI serves the API under /api and the built React bund
 ```
 pay-code-auditor/
   api/
+<<<<<<< HEAD
+    main.py     # FastAPI app; mounts /api and serves web/dist
+    routes.py   # audit + sample-data endpoints
+    jobs.py     # in-memory audit job store (capped, oldest-first eviction)
+  auditor/
+    schemas.py  ingest.py  impact.py  report.py
+    llm.py      # Groq or Gemini, selected by LLM_PROVIDER
+    retrieval.py  prompts.py  classify.py  verifier.py  memory.py  remediation.py
+    agent/      # tools.py, investigator.py — the bounded 6-step loop
+  web/          # React app (Vite + TypeScript)
+  data/  eval/  tests/
+  Dockerfile    render.yaml   # single-service production deploy
+```
+
+`web/src/api/types.ts` is generated from the live OpenAPI schema, never hand-edited.
+=======
     main.py       # FastAPI app, mounts /api and serves web/dist
     routes.py     # the seven endpoints, see below
     jobs.py       # in memory audit job store, plus fake data mode
@@ -114,11 +176,85 @@ Frontend setup, the full feature list, and same origin build instructions are do
 One Docker image, built in two stages. The React app builds first and its output is copied into the same image FastAPI runs from, so one Render web service serves both the API and the frontend from a single origin, no split deploy, no CORS to configure. The embedding model retrieval depends on is baked into the image at build time rather than downloaded on first request, since Render's filesystem does not persist between cold starts, and re-downloading it on every wake was a measured, real delay in production logs.
 
 render.yaml describes the whole service as a blueprint, so a new deploy is one click rather than manual dashboard setup, with API keys prompted for once and stored in Render, never in the repository.
+>>>>>>> 10568b28b2b0f942f05e18bea21e13f6cbb044de
 
 ## The API contract
 
 | Endpoint | Behaviour |
 |---|---|
+<<<<<<< HEAD
+| `GET /api/awards` | List of selectable awards |
+| `GET /api/samples` | Bundled sample businesses (café, retail, construction) for one-click demo data |
+| `GET /api/samples/{id}/paycodes.csv` / `payruns.csv` | Download or fetch a sample's CSVs |
+| `POST /api/audits` | Multipart upload of `paycodes.csv` + `payruns.csv` + `award_id` + `mode`. `422` with readable field errors, or `202` with an `audit_id` |
+| `GET /api/audits/{id}` | Polling endpoint: `status`, `progress`, partial/full `AuditResult`, `pending_question` |
+| `POST /api/audits/{id}/answer` | Answers a clarifying question; resumes the paused investigation |
+| `POST /api/audits/{id}/verdicts/{code}` | Approve or override one flag |
+| `GET /api/audits/{id}/report.csv` | Server-generated CSV export |
+| `GET /api/audits/{id}/letter/{code}` | Draft client letter for one approved flag |
+
+## Model choices
+
+The LLM layer is provider-agnostic — set `LLM_PROVIDER` in `.env` to `groq` (default) or
+`gemini`. Both run the same two-tier cascade.
+
+| Tier | Groq (default) | Gemini |
+|---|---|---|
+| `fast` | `openai/gpt-oss-20b` | configurable via `GEMINI_FAST_MODEL` |
+| `strong` | `openai/gpt-oss-120b` | configurable via `GEMINI_STRONG_MODEL` |
+
+## Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+copy .env.example .env        # then add your GROQ_API_KEY (and/or GOOGLE_API_KEY)
+```
+
+Run the tests:
+
+```bash
+pytest -q
+```
+
+Run the eval harness against the dev set (never the held-out test set during development):
+
+```bash
+python -m eval.run_eval
+```
+
+Run the API (fake-data mode by default — no key needed to explore the contract):
+
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+
+Visit `http://localhost:8000/docs` for the live OpenAPI page, or `http://localhost:8000/`
+once `web/dist` exists (`npm run build` inside `web/`).
+
+Frontend setup and development checks are documented in [`web/README.md`](web/README.md).
+
+## Production deploy
+
+Single Render Web Service, built from the repo's `Dockerfile` via `render.yaml` (Blueprint
+deploy) — Node stage builds the React app, Python stage serves both API and bundle. See
+`render.yaml` for required environment variables.
+
+## Data format
+
+**`paycodes.csv`**: `code, name, description?, counts_for_super (Y/N), payroll_category?`
+
+**`payruns.csv`**: `pay_date, code, total_amount, employees_paid, overtime_hours?` —
+aggregated per code per pay run, no employee names or IDs.
+
+## Limitations (state openly)
+
+- Flags issues for professional review; this is not legal or tax advice.
+- The rules reference in the spec is a starting point — the ATO page and the award are the authority.
+- Does not handle the maximum contribution base, salary sacrifice, award-specific super above the legal minimum, or complex contractor arrangements.
+- Payment-pattern findings are review flags, not conclusions.
+=======
 | `GET /api/awards` | list of selectable awards |
 | `POST /api/audits` | multipart upload of the two CSVs plus an award and a mode, returns a 422 with readable field errors or a 202 with an audit id |
 | `GET /api/audits/{id}` | polling endpoint, status, progress, the partial or full result, and any pending question |
@@ -145,6 +281,7 @@ Every module named in the architecture section is built and covered by tests, in
   contractor arrangements are all out of scope for this build.
 - Payment pattern findings are review flags for a human, never automatic
   conclusions.
+>>>>>>> 10568b28b2b0f942f05e18bea21e13f6cbb044de
 - The prototype supports one award at a time.
 - Accuracy figures come from a test set labelled using the ATO's published
   guidance, not an independent third party review, and that should be said
