@@ -289,7 +289,11 @@ html.audit-review-view::-webkit-scrollbar, body.audit-review-view::-webkit-scrol
   .audit-heading .mantine-Button-root { width: 100%; margin-top: 0; }
 }
 @media (max-width: 390px) {
-  .app-brand strong { max-width: 72px; line-height: 1.05; }
+  /* The base rule sets white-space: nowrap for larger screens; without overriding it
+     here, this max-width has nothing to wrap onto and the text overflows straight over
+     the nav links instead — which also meant clicks in that overlapped region landed on
+     whichever element happened to be on top, not reliably the one tapped. */
+  .app-brand strong { max-width: 72px; line-height: 1.05; white-space: normal; }
   .app-brand strong span { letter-spacing: 1.3px; }
 }
 
