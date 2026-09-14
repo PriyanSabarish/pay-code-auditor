@@ -134,15 +134,9 @@ directly from the live OpenAPI schema.
 
 This runs on two interchangeable providers, chosen with `LLM_PROVIDER` in `.env` — `groq` or `gemini`.
 
-Groq is the default. Fast tier is `openai/gpt-oss-20b`, used for bulk classification and
-name clean-up. Strong tier is `openai/gpt-oss-120b`, used for escalated codes, the
-investigator agent, the verifier, and remediation. These were chosen from what's actually
-available on the self-serve Groq catalog right now, not from a preference ranking —
-`llama-3.1-8b-instant` and `llama-3.3-70b-versatile`, the models most guides still quote,
-moved to enterprise-only pricing on Groq in late August 2026 and are no longer reachable on
-a standard account.
 
-Gemini is the fallback, and it exists for a real reason, not a nice-to-have. Groq's free
+
+Gemini is the default, and it exists for a real reason, not a nice-to-have. Groq's free
 tier enforces a daily token quota tight enough to run out mid-session during real testing,
 with no reset time shown anywhere in the account dashboard. Gemini gives the same cascade a
 second, independent quota to fall back to. `gemini-3.1-flash-lite` (or `gemini-3.5-flash-lite`)
@@ -151,6 +145,15 @@ assumed, since the flagship flash model's free quota measured only twenty reques
 the key this was tested against, while the lite model's measured five hundred. Every call
 site in the codebase talks to one interface in `auditor/llm.py`, so the provider switch is
 contained to one file and nowhere else needs to know which one is active.
+
+Groq is the fallback. Fast tier is `openai/gpt-oss-20b`, used for bulk classification and
+name clean-up. Strong tier is `openai/gpt-oss-120b`, used for escalated codes, the
+investigator agent, the verifier, and remediation. These were chosen from what's actually
+available on the self-serve Groq catalog right now, not from a preference ranking —
+`llama-3.1-8b-instant` and `llama-3.3-70b-versatile`, the models most guides still quote,
+moved to enterprise-only pricing on Groq in late August 2026 and are no longer reachable on
+a standard account.
+
 
 Override any of the four model names (`GROQ_FAST_MODEL`, `GROQ_STRONG_MODEL`,
 `GEMINI_FAST_MODEL`, `GEMINI_STRONG_MODEL`) in `.env` if either provider's lineup changes again.
