@@ -4,6 +4,8 @@ An AI agent that checks a business's payroll pay codes against Australia's Payda
 
 Primary customer: bookkeepers and BAS agents who run payroll for many small business clients at once.
 
+URL: https://pay-code-auditor.onrender.com
+
 ## The problem, in plain terms
 
 Since 1 July 2026, employers must pay super every payday instead of every quarter, and the amount super is calculated on changed from ordinary time earnings to a new measure called qualifying earnings. Every payroll system has a list of pay codes, things like Sunday penalty, tool allowance, commission, and each one has a setting that says whether it counts towards super. Reviewing that list by hand, one code at a time, is slow and easy to get wrong, and a wrong setting repeats every single pay run until someone catches it.
